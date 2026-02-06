@@ -1,0 +1,240 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..900&family=Spline+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================
+   LUXE CRM THEME — clean minimal, WhatsApp-smooth, premium
+   - subtle borders
+   - glassy surfaces
+   - crisp typography
+   ========================================================= */
+
+:root {
+  --font-sans: 'Spline Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Light */
+  --background: 210 30% 98%;
+  --foreground: 222 35% 12%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 35% 12%;
+  --card-border: 220 20% 90%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 35% 12%;
+  --popover-border: 220 20% 90%;
+
+  --border: 220 18% 88%;
+  --input: 220 20% 86%;
+
+  /* Brand: teal-cyan with a warm accent */
+  --primary: 186 86% 38%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 30% 96%;
+  --secondary-foreground: 222 35% 14%;
+
+  --muted: 210 30% 96%;
+  --muted-foreground: 218 14% 44%;
+
+  --accent: 25 95% 52%;
+  --accent-foreground: 24 35% 10%;
+
+  --destructive: 0 82% 56%;
+  --destructive-foreground: 210 40% 98%;
+
+  --ring: 186 86% 38%;
+
+  --chart-1: 186 86% 38%;
+  --chart-2: 25 95% 52%;
+  --chart-3: 262 83% 58%;
+  --chart-4: 148 62% 45%;
+  --chart-5: 222 76% 55%;
+
+  --radius: 0.95rem;
+
+  /* interaction overlays used by existing elevate utilities */
+  --button-outline: rgba(0, 0, 0, 0.10);
+  --badge-outline: rgba(0, 0, 0, 0.06);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0, 0, 0, 0.03);
+  --elevate-2: rgba(0, 0, 0, 0.08);
+
+  --shadow-2xs: 0 1px 0 hsl(220 30% 10% / 0.02);
+  --shadow-xs: 0 1px 2px hsl(220 30% 10% / 0.06);
+  --shadow-sm: 0 2px 10px hsl(220 30% 10% / 0.08);
+  --shadow: 0 10px 30px hsl(220 30% 10% / 0.08);
+  --shadow-md: 0 14px 40px hsl(220 30% 10% / 0.10);
+  --shadow-lg: 0 18px 60px hsl(220 30% 10% / 0.12);
+  --shadow-xl: 0 28px 90px hsl(220 30% 10% / 0.14);
+  --shadow-2xl: 0 40px 120px hsl(220 30% 10% / 0.18);
+
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --sidebar: 210 35% 97%;
+  --sidebar-foreground: 222 35% 12%;
+  --sidebar-border: 220 18% 88%;
+  --sidebar-primary: 186 86% 38%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 210 30% 95%;
+  --sidebar-accent-foreground: 222 35% 12%;
+  --sidebar-ring: 186 86% 38%;
+
+  /* Computed borders fallbacks used by tailwind config */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+.dark {
+  --button-outline: rgba(255, 255, 255, 0.10);
+  --badge-outline: rgba(255, 255, 255, 0.06);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255, 255, 255, 0.04);
+  --elevate-2: rgba(255, 255, 255, 0.09);
+
+  --background: 222 38% 8%;
+  --foreground: 210 40% 98%;
+
+  --card: 222 34% 11%;
+  --card-foreground: 210 40% 98%;
+  --card-border: 220 20% 18%;
+
+  --popover: 222 34% 11%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 220 20% 18%;
+
+  --border: 220 20% 18%;
+  --input: 220 22% 22%;
+
+  --primary: 186 88% 44%;
+  --primary-foreground: 222 40% 10%;
+
+  --secondary: 222 26% 14%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 222 26% 14%;
+  --muted-foreground: 215 16% 70%;
+
+  --accent: 25 95% 56%;
+  --accent-foreground: 222 40% 10%;
+
+  --destructive: 0 78% 55%;
+  --destructive-foreground: 210 40% 98%;
+
+  --ring: 186 88% 44%;
+
+  --sidebar: 222 36% 10%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 220 20% 18%;
+  --sidebar-primary: 186 88% 44%;
+  --sidebar-primary-foreground: 222 40% 10%;
+  --sidebar-accent: 222 28% 14%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-ring: 186 88% 44%;
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .grain {
+    position: relative;
+  }
+  .grain::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+    opacity: 0.35;
+    border-radius: inherit;
+  }
+
+  .surface {
+    @apply bg-card border border-card-border shadow-sm;
+  }
+
+  .surface-glass {
+    background: hsl(var(--card) / 0.68);
+    border: 1px solid hsl(var(--card-border) / 0.7);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(10px);
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus:ring-4 focus:ring-ring/15 focus:border-ring;
+  }
+
+  .fade-in {
+    animation: fadeIn 420ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  .rise-in {
+    animation: riseIn 520ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 90ms; }
+  .stagger-3 { animation-delay: 140ms; }
+  .stagger-4 { animation-delay: 190ms; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(10px) scale(.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
