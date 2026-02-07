@@ -14,8 +14,8 @@ export type Conversation = {
 
 export type Message = {
   id: number;
-  contactId?: number;
-  direction?: "inbound" | "outbound";
+  contactId: number;
+  direction: "inbound" | "outbound" | string;
   content: string;
   createdAt?: string;
 };
@@ -28,7 +28,6 @@ export function useConversations(search?: string) {
   return useQuery({
     queryKey: ["conversations", { search: search || "" }],
     queryFn: async () => {
-      // later: we will build conversations by grouping messages by contactId
       return [] as Conversation[];
     },
   });
@@ -36,24 +35,40 @@ export function useConversations(search?: string) {
 
 /**
  * Messages list
- * Backend: GET /api/messages
  *
- * NOTE: InboxPage currently calls useMessages(conversationId)
- * We'll ignore conversationId for now and return all messages.
+ * Backend has 2 endpoints:
+ * 1) GET /api/messages -> returns { messages: [...], pagination: {...} }
+ * 2) GET /api/messages/contact/:contactId -> returns [...]
+ *
+ * InboxPage currently calls useMessages(conversationId).
+ * We'll treat conversationId as contactId for now.
  */
-export function useMessages(_conversationId?: number) {
+export function useMessages(conversationId?: number) {
   return useQuery({
-    queryKey: ["messages"],
+    enabled: true,
+    queryKey: ["messages", conversationId || "all"],
     queryFn: async () => {
-      const data = await api.get<any[]>("/api/messages");
+      let raw: any;
 
-      // normalize to Message shape for UI safety
-      return (data || []).map((m) => ({
+      // If we have an ID, load messages for that contact (best for chat UI)
+      if (conversationId) {
+        raw = await api.get<any>(`/api/messages/contact/${conversationId}`);
+      } else {
+        // Otherwise load all messages (returns object with messages array)
+        raw = await api.get<any>(`/api/messages`);
+      }
+
+      // Normalize:
+      // - if backend returns array -> use it
+      // - if backend returns { messages: [] } -> use raw.messages
+      const arr = Array.isArray(raw) ? raw : raw?.messages || [];
+
+      return arr.map((m: any) => ({
         id: m.id,
         contactId: m.contact_id ?? m.contactId,
         direction: m.direction,
         content: m.content ?? m.body ?? "",
-        createdAt: m.created_at ?? m.createdAt,
+        createdAt: m.sent_at ?? m.created_at ?? m.createdAt,
       })) as Message[];
     },
   });
@@ -62,27 +77,28 @@ export function useMessages(_conversationId?: number) {
 /**
  * Send message
  * Backend: POST /api/messages
- *
- * Your backend likely expects:
- * { contactId, content }
+ * expects: { contactId, content, whatsappAccountId? }
  */
 export function useSendMessage() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: { conversationId: number; body: string }) => {
-      // TEMP mapping:
-      // conversationId is treated as contactId for now
-      const res = await api.post("/api/messages", {
+      // conversationId is treated as contactId
+      return api.post("/api/messages", {
         contactId: input.conversationId,
         content: input.body,
       });
-
-      return res;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["messages"] });
+    onSuccess: (_data, vars) => {
+      // refresh messages for this contact
+      qc.invalidateQueries({ queryKey: ["messages", vars.conversationId] });
+
+      // refresh "all"
+      qc.invalidateQueries({ queryKey: ["messages", "all"] });
+
       qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }
@@ -95,9 +111,7 @@ export function useMarkConversationRead() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (_conversationId: number) => {
-      return true;
-    },
+    mutationFn: async (_conversationId: number) => true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
     },

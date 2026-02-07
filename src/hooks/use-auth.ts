@@ -19,7 +19,6 @@ export function useLogin() {
         throw new Error(json?.message || "Login failed");
       }
 
-      // save token if backend returns it
       if (json?.token) {
         setAuthToken(json.token);
       }
@@ -37,12 +36,12 @@ export function useSignup() {
       password: string;
       businessName: string;
     }) => {
-      // backend might expect companyName instead of businessName
+      // IMPORTANT: backend expects businessName (camelCase)
       const payload = {
         name: data.name,
         email: data.email,
         password: data.password,
-        business_name: data.businessName,
+        businessName: data.businessName,
       };
 
       const res = await fetch(`${API_URL}/api/auth/register`, {
@@ -58,7 +57,6 @@ export function useSignup() {
         throw new Error(json?.message || "Signup failed");
       }
 
-      // save token if backend returns it
       if (json?.token) {
         setAuthToken(json.token);
       }

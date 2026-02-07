@@ -318,7 +318,8 @@ export default function ContactsPage() {
           ) : (
             <div className="overflow-auto">
               <Table data-testid="contacts-table">
-                <TableHeader className="sticky top-[132px] md:top-[140px] bg-card/70 backdrop-blur">
+                <TableHeader className="sticky top-[132px] md:top-[140px] z-50 bg-white">
+
                   <TableRow>
                     <TableHead className="min-w-[220px]">Name</TableHead>
                     <TableHead className="min-w-[160px]">Phone</TableHead>
