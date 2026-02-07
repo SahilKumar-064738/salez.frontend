@@ -8,7 +8,7 @@ export interface AuthUser {
 }
 
 // Token storage helpers
-const TOKEN_KEY = 'auth_token';
+const TOKEN_KEY = "auth_token";
 
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -22,134 +22,148 @@ export function removeAuthToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export async function loginUser(email: string, password: string): Promise<AuthUser> {
+// Helper to safely normalize user object from backend
+function normalizeUser(data: any): AuthUser {
+  const user = data?.user ?? data;
+
+  return {
+    id: Number(user?.id ?? 0),
+    email: user?.email ?? "",
+    name: user?.name ?? "",
+    companyName: user?.companyName ?? user?.company_name ?? null,
+  };
+}
+
+/**
+ * POST /api/auth/login
+ */
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<AuthUser> {
   const res = await fetch(apiUrl("/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ email, password }),
   });
-  
+
+  const text = await res.text();
+
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.message || "Login failed");
+    throw new Error(data?.message || "Login failed");
   }
-  
-  const data = await res.json();
-  
-  // Store the token
-  if (data.token) {
-    setAuthToken(data.token);
-  }
-  
-  // Return user data in expected format
-  return {
-    id: data.id,
-    email: data.email,
-    name: data.name,
-    companyName: data.companyName || null
-  };
+
+  // Save token (common backend shapes)
+  const token = data?.token ?? data?.accessToken ?? data?.data?.token;
+  if (token) setAuthToken(token);
+
+  return normalizeUser(data);
 }
 
+/**
+ * POST /api/auth/register
+ */
 export async function signupUser(data: {
   name: string;
-  companyName: string;
+  companyName?: string;
   email: string;
   password: string;
 }): Promise<AuthUser> {
-  const res = await fetch(apiUrl("/auth/signup"), {
+  const res = await fetch(apiUrl("/auth/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
       name: data.name,
-      company_name: data.companyName,
+      companyName: data.companyName || null,
       email: data.email,
       password: data.password,
     }),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    
-    try {
-      const json = JSON.parse(text);
-      throw new Error(json.message || "Signup failed");
-    } catch {
-      throw new Error(text || "Signup failed");
-    }
+  const text = await res.text();
+
+  let responseData: any = null;
+  try {
+    responseData = text ? JSON.parse(text) : null;
+  } catch {
+    responseData = null;
   }
 
-  const responseData = await res.json();
-  
-  // Store the token
-  if (responseData.token) {
-    setAuthToken(responseData.token);
+  if (!res.ok) {
+    throw new Error(responseData?.message || "Signup failed");
   }
-  
-  // Return user data in expected format
-  return {
-    id: responseData.id,
-    email: responseData.email,
-    name: responseData.name,
-    companyName: responseData.companyName || null
-  };
+
+  // Save token (common backend shapes)
+  const token =
+    responseData?.token ??
+    responseData?.accessToken ??
+    responseData?.data?.token;
+
+  if (token) setAuthToken(token);
+
+  return normalizeUser(responseData);
 }
 
+/**
+ * GET /api/auth/me
+ */
 export async function fetchMe(): Promise<AuthUser | null> {
   const token = getAuthToken();
-  
-  if (!token) {
-    return null;
-  }
-  
+
+  if (!token) return null;
+
   try {
-    const res = await fetch(apiUrl("/auth/me"), { 
+    const res = await fetch(apiUrl("/auth/me"), {
+      method: "GET",
       credentials: "include",
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
-    
+
     if (res.status === 401) {
-      // Token expired or invalid, remove it
       removeAuthToken();
       return null;
     }
-    
-    if (!res.ok) {
-      return null;
-    }
-    
+
+    if (!res.ok) return null;
+
     const data = await res.json();
-    
-    return {
-      id: data.id,
-      email: data.email,
-      name: data.name,
-      companyName: data.companyName || null
-    };
+    return normalizeUser(data);
   } catch (error) {
-    console.error('Failed to fetch user:', error);
+    console.error("Failed to fetch user:", error);
     return null;
   }
 }
 
+/**
+ * POST /api/auth/logout
+ */
 export async function logoutUser(): Promise<void> {
   const token = getAuthToken();
-  
+
   try {
-    await fetch(apiUrl("/auth/logout"), { 
-      method: "POST", 
+    await fetch(apiUrl("/auth/logout"), {
+      method: "POST",
       credentials: "include",
-      headers: token ? {
-        'Authorization': `Bearer ${token}`
-      } : {}
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {},
     });
   } catch (error) {
-    console.error('Logout request failed:', error);
+    console.error("Logout request failed:", error);
   } finally {
-    // Always remove token, even if request fails
     removeAuthToken();
   }
 }

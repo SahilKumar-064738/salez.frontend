@@ -34,14 +34,10 @@ export default function Signup() {
         businessName: values.companyName,
       },
       {
-        onSuccess: (data) => {
-          // Store token using auth service
-          if (data.token) {
-            setAuthToken(data.token);
-          }
-          // Redirect to inbox after successful signup
-          setLocation("/inbox");
-        },
+        onSuccess: () => {
+  setLocation("/inbox");
+},
+
         onError: (err: any) => {
           alert(err.message || "Signup failed");
         },

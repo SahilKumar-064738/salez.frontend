@@ -1,79 +1,78 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
-import { z } from "zod";
+import { api } from "@/lib/api";
 
-function parseWithLogging<T>(schema: z.ZodSchema<T>, data: unknown, label: string): T {
-  const result = schema.safeParse(data);
-  if (!result.success) {
-    console.error(`[Zod] ${label} validation failed:`, result.error.format());
-    throw result.error;
-  }
-  return result.data;
-}
+export type AutomationRule = {
+  id: number;
+  business_id: number;
+  trigger: string;
+  condition: any;
+  action: any;
+  delay_minutes: number;
+  created_at?: string;
+};
 
 export function useAutomationRules() {
   return useQuery({
-    queryKey: [api.automation.list.path],
+    queryKey: ["automation"],
     queryFn: async () => {
-      const res = await fetch(api.automation.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch automation rules");
-      const json = await res.json();
-      return parseWithLogging(api.automation.list.responses[200], json, "automation.list");
+      // Backend: GET /api/automation (returns array)
+      const data = await api.get<any[]>("/api/automation");
+      return (data || []) as AutomationRule[];
     },
   });
 }
 
 export function useCreateAutomationRule() {
   const qc = useQueryClient();
+
   return useMutation({
-    mutationFn: async (data: z.infer<typeof api.automation.create.input>) => {
-      const validated = api.automation.create.input.parse(data);
-      const res = await fetch(api.automation.create.path, {
-        method: api.automation.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        if (res.status === 400) {
-          const err = parseWithLogging(api.automation.create.responses[400], await res.json(), "automation.create.400");
-          throw new Error(err.message);
-        }
-        throw new Error("Failed to create rule");
-      }
-      const json = await res.json();
-      return parseWithLogging(api.automation.create.responses[201], json, "automation.create.201");
+    mutationFn: async (input: {
+      trigger: string;
+      condition: any;
+      action: any;
+      delayMinutes?: number;
+    }) => {
+      // Backend: POST /api/automation
+      return api.post<AutomationRule>("/api/automation", input);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [api.automation.list.path] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["automation"] });
+    },
   });
 }
 
 export function useUpdateAutomationRule() {
   const qc = useQueryClient();
+
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: z.infer<typeof api.automation.update.input> }) => {
-      const validated = api.automation.update.input.parse(updates);
-      const url = buildUrl(api.automation.update.path, { id });
-      const res = await fetch(url, {
-        method: api.automation.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        if (res.status === 400) {
-          const err = parseWithLogging(api.automation.update.responses[400], await res.json(), "automation.update.400");
-          throw new Error(err.message);
-        }
-        if (res.status === 404) {
-          const err = parseWithLogging(api.automation.update.responses[404], await res.json(), "automation.update.404");
-          throw new Error(err.message);
-        }
-        throw new Error("Failed to update rule");
-      }
-      const json = await res.json();
-      return parseWithLogging(api.automation.update.responses[200], json, "automation.update.200");
+    mutationFn: async (input: {
+      id: number;
+      updates: Partial<{
+        trigger: string;
+        condition: any;
+        action: any;
+        delayMinutes: number;
+      }>;
+    }) => {
+      // Backend: PUT /api/automation/:id
+      return api.put<AutomationRule>(`/api/automation/${input.id}`, input.updates);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [api.automation.list.path] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["automation"] });
+    },
+  });
+}
+
+export function useDeleteAutomationRule() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      // Backend: DELETE /api/automation/:id
+      return api.delete(`/api/automation/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["automation"] });
+    },
   });
 }

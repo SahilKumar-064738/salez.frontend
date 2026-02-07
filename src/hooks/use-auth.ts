@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
+import { setAuthToken } from "@/services/auth";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function useLogin() {
   return useMutation({
@@ -8,11 +9,22 @@ export function useLogin() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error("Login failed");
-      return res.json();
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(json?.message || "Login failed");
+      }
+
+      // save token if backend returns it
+      if (json?.token) {
+        setAuthToken(json.token);
+      }
+
+      return json;
     },
   });
 }
@@ -25,18 +37,33 @@ export function useSignup() {
       password: string;
       businessName: string;
     }) => {
-      const res = await fetch(`${API_URL}/api/auth/signup`, {
+      // backend might expect companyName instead of businessName
+      const payload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        business_name: data.businessName,
+      };
+
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        credentials: "include",
+        body: JSON.stringify(payload),
       });
 
+      const json = await res.json().catch(() => null);
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Signup failed");
+        throw new Error(json?.message || "Signup failed");
       }
 
-      return res.json();
+      // save token if backend returns it
+      if (json?.token) {
+        setAuthToken(json.token);
+      }
+
+      return json;
     },
   });
 }
