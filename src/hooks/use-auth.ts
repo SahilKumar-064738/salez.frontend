@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export function useLogin() {
   return useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -23,7 +25,7 @@ export function useSignup() {
       password: string;
       businessName: string;
     }) => {
-      const res = await fetch("/api/auth/signup", {
+      const res = await fetch(`${API_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
