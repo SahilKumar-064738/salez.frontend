@@ -14,7 +14,6 @@ import { StageBadge } from "@/components/StageBadge";
 import { cn } from "@/lib/utils";
 import { Loader2, MessageSquareText, Plus, Search, Tag, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@shared/routes";
 import { stages } from "@shared/schema";
 
 function useDebounced<T>(value: T, delay = 250) {
@@ -83,7 +82,7 @@ function ContactEditor({
 
   return (
     <div className="space-y-4" data-testid={`contact-editor-${mode}`}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="flex flex-col min-h-[calc(100vh-120px)] rise-in px-3 sm:px-4 lg:px-6">
         <div>
           <label className="text-xs font-semibold text-muted-foreground">Name</label>
           <Input
@@ -179,9 +178,10 @@ export default function ContactsPage() {
   }, [contacts]);
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-contacts">
-      <Card className="surface-glass rounded-2xl overflow-hidden">
-        <div className="sticky top-0 z-10 border-b bg-card/65 backdrop-blur border-card-border">
+    <div className="flex flex-col min-h-[calc(100vh-120px)] rise-in" data-testid="page-contacts">
+      <Card className="surface-glass rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0">
+        {/* Header */}
+        <div className="shrink-0 border-b bg-card/65 backdrop-blur border-card-border">
           <div className="p-4 sm:p-5">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
@@ -214,7 +214,11 @@ export default function ContactsPage() {
                           {
                             onSuccess: () => toast({ title: "Created", description: "Contact added to your CRM." }),
                             onError: (e) =>
-                              toast({ title: "Create failed", description: String(e.message || e), variant: "destructive" }),
+                              toast({
+                                title: "Create failed",
+                                description: String((e as any)?.message || e),
+                                variant: "destructive",
+                              }),
                           },
                         );
                       }}
@@ -234,7 +238,7 @@ export default function ContactsPage() {
               </div>
             </div>
 
-            {/* filters row */}
+            {/* Filters */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-[1fr_180px_220px_auto] gap-2 items-center">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -291,7 +295,10 @@ export default function ContactsPage() {
             </div>
 
             {tag ? (
-              <div className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground" data-testid="contacts-active-tag">
+              <div
+                className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground"
+                data-testid="contacts-active-tag"
+              >
                 <span className="font-semibold text-foreground">Filtering by tag:</span>
                 <Badge variant="outline" className="rounded-full">
                   {tag}
@@ -301,7 +308,8 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        <div className="p-2 sm:p-3">
+        {/* Content area (scrolls) */}
+        <div className="flex-1 min-h-0 overflow-auto px-2 sm:px-3">
           {q.isLoading ? (
             <div className="p-6 text-sm text-muted-foreground" data-testid="contacts-loading">
               <Loader2 className="inline-block h-4 w-4 animate-spin mr-2" />
@@ -316,148 +324,155 @@ export default function ContactsPage() {
               No contacts found. Create your first contact to start messaging.
             </div>
           ) : (
-            <div className="overflow-auto">
-              <Table data-testid="contacts-table">
-                <TableHeader className="sticky top-[132px] md:top-[140px] z-50 bg-white">
+            <div className="p-2 sm:p-3">
+              <div className="overflow-auto">
+                <Table data-testid="contacts-table">
+                  <TableHeader className="sticky top-0 z-20 bg-card">
+                    <TableRow>
+                      <TableHead className="min-w-[220px]">Name</TableHead>
+                      <TableHead className="min-w-[160px]">Phone</TableHead>
+                      <TableHead className="min-w-[140px]">Stage</TableHead>
+                      <TableHead className="min-w-[260px]">Tags</TableHead>
+                      <TableHead className="min-w-[140px]">Last active</TableHead>
+                      <TableHead className="text-right min-w-[220px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-                  <TableRow>
-                    <TableHead className="min-w-[220px]">Name</TableHead>
-                    <TableHead className="min-w-[160px]">Phone</TableHead>
-                    <TableHead className="min-w-[140px]">Stage</TableHead>
-                    <TableHead className="min-w-[260px]">Tags</TableHead>
-                    <TableHead className="min-w-[140px]">Last active</TableHead>
-                    <TableHead className="text-right min-w-[220px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contacts.map((c: any) => (
-                    <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-semibold">
-                        <div className="truncate max-w-[260px]" data-testid={`contact-name-${c.id}`}>
-                          {c.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground" data-testid={`contact-phone-${c.id}`}>
-                        {c.phone}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={c.stage}
-                          onValueChange={(v) => {
+                  <TableBody>
+                    {contacts.map((c: any) => (
+                      <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-semibold">
+                          <div className="truncate max-w-[260px]" data-testid={`contact-name-${c.id}`}>
+                            {c.name}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-sm text-muted-foreground" data-testid={`contact-phone-${c.id}`}>
+                          {c.phone}
+                        </TableCell>
+
+                        <TableCell>
+                          <Select
+                            value={c.stage}
+                            onValueChange={(v) => {
+                              updateM.mutate(
+                                { id: c.id, updates: { stage: v as any } },
+                                {
+                                  onError: (e) =>
+                                    toast({
+                                      title: "Update failed",
+                                      description: String((e as any)?.message || e),
+                                      variant: "destructive",
+                                    }),
+                                },
+                              );
+                            }}
+                          >
+                            <SelectTrigger
+                              className="rounded-xl h-9 focus-ring bg-background/40"
+                              data-testid={`contact-stage-inline-${c.id}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stages.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  <div className="flex items-center gap-2">
+                                    <StageBadge stage={s} />
+                                    <span>{s}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell>
+                          <Tags tags={c.tags || []} onClickTag={(t) => setTag(t)} />
+                        </TableCell>
+
+                        <TableCell className="text-sm text-muted-foreground" data-testid={`contact-lastactive-${c.id}`}>
+                          {c.lastActiveAt ? fmtDate(c.lastActiveAt) : "—"}
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              className="rounded-xl"
+                              onClick={() => setEdit(c)}
+                              data-testid={`contact-edit-open-${c.id}`}
+                            >
+                              Edit
+                            </Button>
+
+                            <Link
+                              href="/inbox"
+                              className={cn(
+                                "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold",
+                                "bg-gradient-to-br from-primary/12 to-accent/8 border-primary/20 hover:shadow-sm transition-all",
+                              )}
+                              data-testid={`contact-open-chat-${c.id}`}
+                            >
+                              <MessageSquareText className="h-4 w-4 mr-2 text-primary" />
+                              Chat
+                            </Link>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Edit drawer */}
+                <Drawer open={!!edit} onOpenChange={(v) => !v && setEdit(null)}>
+                  <DrawerTrigger asChild>
+                    <span className="hidden" />
+                  </DrawerTrigger>
+                  <DrawerContent className="rounded-t-3xl" data-testid="contact-edit-drawer">
+                    <div className="mx-auto w-full max-w-2xl p-4">
+                      <DrawerHeader className="px-0">
+                        <DrawerTitle>Edit contact</DrawerTitle>
+                      </DrawerHeader>
+
+                      {edit ? (
+                        <ContactEditor
+                          mode="edit"
+                          initial={edit}
+                          saving={updateM.isPending}
+                          onSave={(data) => {
                             updateM.mutate(
-                              { id: c.id, updates: { stage: v as any } },
+                              { id: (edit as any).id, updates: { ...data } as any },
                               {
+                                onSuccess: () => {
+                                  toast({ title: "Saved", description: "Contact updated." });
+                                  setEdit(null);
+                                },
                                 onError: (e) =>
                                   toast({
-                                    title: "Update failed",
-                                    description: String(e.message || e),
+                                    title: "Save failed",
+                                    description: String((e as any)?.message || e),
                                     variant: "destructive",
                                   }),
                               },
                             );
                           }}
-                        >
-                          <SelectTrigger
-                            className="rounded-xl h-9 focus-ring bg-background/40"
-                            data-testid={`contact-stage-inline-${c.id}`}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stages.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                <div className="flex items-center gap-2">
-                                  <StageBadge stage={s} />
-                                  <span>{s}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Tags
-                          tags={c.tags || []}
-                          onClickTag={(t) => setTag(t)}
                         />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground" data-testid={`contact-lastactive-${c.id}`}>
-                        {c.lastActiveAt ? fmtDate(c.lastActiveAt) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            className="rounded-xl"
-                            onClick={() => setEdit(c)}
-                            data-testid={`contact-edit-open-${c.id}`}
-                          >
-                            Edit
-                          </Button>
-                          <Link
-                            href="/inbox"
-                            className={cn(
-                              "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold",
-                              "bg-gradient-to-br from-primary/12 to-accent/8 border-primary/20 hover:shadow-sm transition-all",
-                            )}
-                            data-testid={`contact-open-chat-${c.id}`}
-                          >
-                            <MessageSquareText className="h-4 w-4 mr-2 text-primary" />
-                            Chat
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      ) : null}
 
-              {/* edit drawer (mobile-friendly) */}
-              <Drawer open={!!edit} onOpenChange={(v) => !v && setEdit(null)}>
-                <DrawerTrigger asChild>
-                  <span className="hidden" />
-                </DrawerTrigger>
-                <DrawerContent className="rounded-t-3xl" data-testid="contact-edit-drawer">
-                  <div className="mx-auto w-full max-w-2xl p-4">
-                    <DrawerHeader className="px-0">
-                      <DrawerTitle>Edit contact</DrawerTitle>
-                    </DrawerHeader>
-                    {edit ? (
-                      <ContactEditor
-                        mode="edit"
-                        initial={edit}
-                        saving={updateM.isPending}
-                        onSave={(data) => {
-                          updateM.mutate(
-                            { id: (edit as any).id, updates: { ...data } as any },
-                            {
-                              onSuccess: () => {
-                                toast({ title: "Saved", description: "Contact updated." });
-                                setEdit(null);
-                              },
-                              onError: (e) =>
-                                toast({ title: "Save failed", description: String(e.message || e), variant: "destructive" }),
-                            },
-                          );
-                        }}
-                      />
-                    ) : null}
-                    <div className="mt-3">
-                      <DrawerClose asChild>
-                        <Button variant="outline" className="w-full rounded-xl" data-testid="contact-edit-close">
-                          Close
-                        </Button>
-                      </DrawerClose>
+                      <div className="mt-3">
+                        <DrawerClose asChild>
+                          <Button variant="outline" className="w-full rounded-xl" data-testid="contact-edit-close">
+                            Close
+                          </Button>
+                        </DrawerClose>
+                      </div>
                     </div>
-                  </div>
-                </DrawerContent>
-              </Drawer>
+                  </DrawerContent>
+                </Drawer>
+              </div>
             </div>
           )}
-        </div>
-
-        <div className="px-4 pb-4 text-[11px] text-muted-foreground">
-          Endpoint: <span className="font-mono">{api.contacts.list.path}</span>
         </div>
       </Card>
     </div>

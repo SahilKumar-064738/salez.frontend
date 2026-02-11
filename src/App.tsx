@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
+
+
 // Pre-signin layout components
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -19,7 +21,7 @@ import Login from "@/pages/auth/Login";
 import Signup from "@/pages/auth/Signup";
 
 // Post-signin pages (authenticated)
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import InboxPage from "@/pages/InboxPage";
 import ContactsPage from "@/pages/ContactsPage";
@@ -29,6 +31,7 @@ import BroadcastPage from "@/pages/BroadcastPage";
 import TemplatesPage from "@/pages/TemplatesPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import BillingPage from "@/pages/BillingPage";
+import { useMe } from "@/hooks/use-auth";
 
 // Public layout wrapper (with Navbar and Footer)
 function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -45,11 +48,27 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 
 // Authenticated layout wrapper (with Sidebar)
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const meQ = useMe();
+  const userName = meQ.data?.name || "Dashboard";
+
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen w-full bg-background">
+      <div className="min-h-screen w-full bg-background flex">
         <AppSidebar />
-        <SidebarInset>
+
+        <SidebarInset className="flex-1 min-w-0 md:p-4 lg:p-6">
+          {/* MOBILE TOPBAR */}
+          <div className="md:hidden sticky top-0 z-50 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="h-14 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <SidebarTrigger />
+                <span className="font-semibold truncate">
+                  {userName}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {children}
         </SidebarInset>
       </div>

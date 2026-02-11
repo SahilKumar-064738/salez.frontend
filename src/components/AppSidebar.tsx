@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useMe } from "@/hooks/use-auth";
 import { Brand } from "@/components/Brand";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -41,6 +42,9 @@ const nav = [
 
 export function AppSidebar() {
   const [loc, setLocation] = useLocation();
+  const meQ = useMe();
+const userName = meQ.data?.name || "Dashboard";
+const userEmail = meQ.data?.email || "";
 
   const handleLogout = () => {
     removeAuthToken();
@@ -48,10 +52,12 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar data-testid="app-sidebar" className="border-r border-sidebar-border">
+    <Sidebar data-testid="app-sidebar" className="border-r border-sidebar-border shrink-0">
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center justify-between gap-2">
-          <Brand />
+          <div className="text-sm font-bold truncate">
+  {userName}
+</div>
           <ThemeToggle variant="outline" />
         </div>
       </SidebarHeader>

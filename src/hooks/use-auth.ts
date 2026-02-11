@@ -1,5 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
-import { setAuthToken } from "@/services/auth";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { setAuthToken, getAuthToken } from "@/services/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -36,7 +36,6 @@ export function useSignup() {
       password: string;
       businessName: string;
     }) => {
-      // IMPORTANT: backend expects businessName (camelCase)
       const payload = {
         name: data.name,
         email: data.email,
@@ -63,5 +62,34 @@ export function useSignup() {
 
       return json;
     },
+  });
+}
+
+// ✅ Get current logged-in user
+export function useMe() {
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const token = getAuthToken();
+
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(json?.message || "Failed to fetch user");
+      }
+
+      return json;
+    },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 }
