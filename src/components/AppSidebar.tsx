@@ -12,7 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Brand } from "@/components/Brand";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   BarChart3,
@@ -28,6 +27,9 @@ import {
 import { cn } from "@/lib/utils";
 import { removeAuthToken } from "@/services/auth";
 
+// ✅ new
+import { useMe } from "@/hooks/use-auth";
+
 const nav = [
   { href: "/inbox", label: "Inbox", icon: MessageSquareText },
   { href: "/contacts", label: "Contacts", icon: Users2 },
@@ -42,6 +44,9 @@ const nav = [
 export function AppSidebar() {
   const [loc, setLocation] = useLocation();
 
+  const meQ = useMe();
+  const userName = meQ.data?.name || "Dashboard";
+
   const handleLogout = () => {
     removeAuthToken();
     setLocation("/auth/login");
@@ -51,7 +56,9 @@ export function AppSidebar() {
     <Sidebar data-testid="app-sidebar" className="border-r border-sidebar-border">
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center justify-between gap-2">
-          <Brand />
+          <div className="text-sm font-bold truncate">
+            {userName}
+          </div>
           <ThemeToggle variant="outline" />
         </div>
       </SidebarHeader>
@@ -64,22 +71,37 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {nav.map((item) => {
-                const active = loc === item.href || (item.href !== "/inbox" && loc.startsWith(item.href));
+                const active =
+                  loc === item.href ||
+                  (item.href !== "/inbox" && loc.startsWith(item.href));
+
                 const Icon = item.icon;
+
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={item.label}
+                    >
                       <Link
                         href={item.href}
                         className={cn(
                           "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
                           active
                             ? "bg-gradient-to-r from-primary/16 to-accent/10 text-foreground shadow-sm ring-1 ring-border"
-                            : "hover:bg-sidebar-accent/70 hover:shadow-sm",
+                            : "hover:bg-sidebar-accent/70 hover:shadow-sm"
                         )}
                         data-testid={`nav-${item.label.toLowerCase()}`}
                       >
-                        <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                        <Icon
+                          className={cn(
+                            "h-4 w-4",
+                            active
+                              ? "text-primary"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          )}
+                        />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
