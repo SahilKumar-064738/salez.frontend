@@ -1,26 +1,24 @@
 import * as React from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
-// Pre-signin layout components
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-// Pre-signin pages (public)
 import Landing from "@/pages/public/Landing";
 import Pricing from "@/pages/public/Pricing";
 import Demo from "@/pages/public/Demo";
 import Login from "@/pages/auth/Login";
 import Signup from "@/pages/auth/Signup";
 
-// Post-signin pages (authenticated)
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+
 import InboxPage from "@/pages/InboxPage";
 import ContactsPage from "@/pages/ContactsPage";
 import PipelinePage from "@/pages/PipelinePage";
@@ -30,8 +28,8 @@ import TemplatesPage from "@/pages/TemplatesPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import BillingPage from "@/pages/BillingPage";
 
-// ✅ new
 import { useMe } from "@/hooks/use-auth";
+import { getAuthToken } from "@/services/auth";
 
 // Public layout wrapper (with Navbar and Footer)
 function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -72,14 +70,33 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * If user is logged in and goes to "/", redirect to "/inbox"
+ * This fixes: "from home i have to login again"
+ */
+function LandingWithRedirect() {
+  const [, setLocation] = useLocation();
+  const token = getAuthToken();
+
+  React.useEffect(() => {
+    if (token) {
+      setLocation("/inbox");
+    }
+  }, [token, setLocation]);
+
+  return (
+    <PublicLayout>
+      <Landing />
+    </PublicLayout>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      {/* Public routes with Navbar/Footer */}
+      {/* Public routes */}
       <Route path="/">
-        <PublicLayout>
-          <Landing />
-        </PublicLayout>
+        <LandingWithRedirect />
       </Route>
 
       <Route path="/pricing">
@@ -94,7 +111,6 @@ function Router() {
         </PublicLayout>
       </Route>
 
-      {/* Auth routes with Navbar/Footer */}
       <Route path="/auth/login">
         <PublicLayout>
           <Login />
@@ -107,7 +123,7 @@ function Router() {
         </PublicLayout>
       </Route>
 
-      {/* Authenticated routes with Sidebar */}
+      {/* Authenticated routes */}
       <Route path="/inbox">
         <ProtectedRoute>
           <AuthenticatedLayout>
@@ -178,10 +194,6 @@ function Router() {
 }
 
 function App() {
-  React.useEffect(() => {
-    // Default: respect existing class; otherwise light.
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
