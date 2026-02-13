@@ -1,8 +1,7 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { api } from "@shared/routes";
 import type { Contact, Message } from "@shared/schema";
-import { useConversations, useMarkConversationRead, useMessages, useSendMessage } from "@/hooks/use-inbox";
+import { useMarkConversationRead, useMessages, useSendMessage } from "@/hooks/use-inbox";
 import { useContacts } from "@/hooks/use-contacts";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { StageBadge, StagePill } from "@/components/StageBadge";
 import { cn } from "@/lib/utils";
-
 
 import {
   CheckCheck,
@@ -52,24 +50,26 @@ function bubbleClass(direction: string) {
 }
 
 export default function InboxPage() {
-
-
   const { toast } = useToast();
 
   const [search, setSearch] = React.useState("");
   const debounced = useDebounced(search, 250);
 
+  // For left list
   const convQ = useContacts({ search: debounced });
+
+  // For contact lookup map
   const contactsQ = useContacts({ search: "" });
 
+  // IMPORTANT:
+  // activeId is the CONTACT ID (not conversation id)
   const [activeId, setActiveId] = React.useState<number | null>(null);
 
   const messagesQ = useMessages(activeId ?? undefined);
   const sendM = useSendMessage();
   const markReadM = useMarkConversationRead();
+
   const conversations = Array.isArray(convQ.data) ? convQ.data : [];
-
-
 
   const [draft, setDraft] = React.useState("");
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -79,20 +79,14 @@ export default function InboxPage() {
     (contactsQ.data || []).forEach((c) => map.set((c as any).id, c as any));
     return map;
   }, [contactsQ.data]);
-  console.log("Inbox API data:", convQ.data);
 
-  const activeConversation = React.useMemo(
-    () => conversations.find((c) => (c as any).id === activeId) || null,
-    [conversations, activeId],
-  );
-
+  // Active contact (by activeId)
   const activeContact = React.useMemo(() => {
-    const cid = (activeConversation as any)?.contactId as number | undefined;
-    if (!cid) return null;
-    return contactsById.get(cid) || null;
-  }, [activeConversation, contactsById]);
+    if (!activeId) return null;
+    return contactsById.get(activeId) || null;
+  }, [activeId, contactsById]);
 
-  const messages = (messagesQ.data || []) as unknown as Message[];
+  const messages = (messagesQ.data || []) as unknown as any[];
 
   React.useEffect(() => {
     if (!activeId && conversations.length) {
@@ -101,19 +95,20 @@ export default function InboxPage() {
   }, [activeId, conversations]);
 
   React.useEffect(() => {
-    // Auto mark read when opening
-    if (!activeConversation) return;
-    const unread = (activeConversation as any).unreadCount as number;
-    if (unread > 0) {
-      markReadM.mutate((activeConversation as any).id, {
-        onError: (e) => toast({ title: "Couldn’t mark read", description: String(e.message || e), variant: "destructive" }),
-      });
-    }
+    // This is a stub right now, but safe
+    if (!activeId) return;
+    markReadM.mutate(activeId, {
+      onError: (e: any) =>
+        toast({
+          title: "Couldn’t mark read",
+          description: String(e.message || e),
+          variant: "destructive",
+        }),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
   React.useEffect(() => {
-    // Auto-scroll on new message / send
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -123,12 +118,18 @@ export default function InboxPage() {
     if (!activeId) return;
     const body = draft.trim();
     if (!body) return;
+
     setDraft("");
+
     sendM.mutate(
       { conversationId: activeId, body },
       {
-        onError: (e) => {
-          toast({ title: "Send failed", description: String(e.message || e), variant: "destructive" });
+        onError: (e: any) => {
+          toast({
+            title: "Send failed",
+            description: String(e.message || e),
+            variant: "destructive",
+          });
           setDraft(body);
         },
       },
@@ -152,9 +153,7 @@ export default function InboxPage() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h1 className="text-lg">Inbox</h1>
-                  <p className="text-xs text-muted-foreground">
-                    WhatsApp-like, zero clutter.
-                  </p>
+                  <p className="text-xs text-muted-foreground">WhatsApp-like, zero clutter.</p>
                 </div>
                 <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -193,9 +192,7 @@ export default function InboxPage() {
               <ScrollArea className="h-[calc(100vh-220px)] lg:h-[calc(100vh-190px)]">
                 <div className="space-y-1 pb-2">
                   {conversations.map((c: any) => {
-                    const contact = contactsById.get(c.contactId);
                     const isActive = activeId === c.id;
-                    const unread = Number(c.unreadCount || 0);
 
                     return (
                       <button
@@ -212,11 +209,10 @@ export default function InboxPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <div className="truncate font-semibold">
-                                {contact?.name ?? `Contact #${c.contactId}`}
-                              </div>
-                              {contact?.stage ? <StageBadge stage={contact.stage as any} /> : null}
+                              <div className="truncate font-semibold">{c.name ?? "Unnamed"}</div>
+                              {c.stage ? <StageBadge stage={c.stage as any} /> : null}
                             </div>
+
                             <div className="mt-1 text-xs text-muted-foreground truncate">
                               {preview((c as any).lastMessagePreview || "")}
                             </div>
@@ -226,19 +222,8 @@ export default function InboxPage() {
                             <div className="text-[11px] text-muted-foreground">
                               {fmtTime((c as any).lastMessageAt)}
                             </div>
-                            {unread > 0 ? (
-                              <div className="inline-flex items-center gap-1">
-                                <span
-                                  className="h-2 w-2 rounded-full bg-primary shadow-[0_0_0_4px] shadow-primary/10"
-                                  aria-hidden="true"
-                                />
-                                <span className="text-[11px] font-semibold text-primary" data-testid={`conversation-unread-${c.id}`}>
-                                  {unread}
-                                </span>
-                              </div>
-                            ) : (
-                              <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/60" />
-                            )}
+
+                            <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/60" />
                           </div>
                         </div>
                       </button>
@@ -270,11 +255,9 @@ export default function InboxPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <div className="truncate font-semibold" data-testid="chat-contact-name">
-                        {activeContact?.name ?? `Contact #${(activeConversation as any)?.contactId}`}
+                        {activeContact?.name ?? "Unknown Contact"}
                       </div>
-                      {activeContact?.stage ? (
-                        <StagePill stage={activeContact.stage as any} />
-                      ) : null}
+                      {activeContact?.stage ? <StagePill stage={activeContact.stage as any} /> : null}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground" data-testid="chat-contact-meta">
                       {activeContact?.phone ? `Phone: ${activeContact.phone}` : "—"}
@@ -311,11 +294,7 @@ export default function InboxPage() {
                   </div>
                 ) : (
                   <ScrollArea className="h-full">
-                    <div
-                      ref={listRef}
-                      className="px-4 py-6 space-y-3"
-                      data-testid="chat-messages"
-                    >
+                    <div ref={listRef} className="px-4 py-6 space-y-3" data-testid="chat-messages">
                       <AnimatePresence initial={false}>
                         {messages.map((m: any) => (
                           <motion.div
@@ -324,14 +303,22 @@ export default function InboxPage() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -6 }}
                             transition={{ duration: 0.18, ease: "easeOut" }}
-                            className={cn("max-w-[88%] sm:max-w-[72%] rounded-2xl px-4 py-3", bubbleClass(m.direction))}
+                            className={cn(
+                              "max-w-[88%] sm:max-w-[72%] rounded-2xl px-4 py-3",
+                              bubbleClass(m.direction),
+                            )}
                             data-testid={`message-${m.id}`}
                           >
-                            <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                              {m.body}
-                            </div>
-                            <div className={cn("mt-2 text-[11px] opacity-80", m.direction === "outbound" ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                              {fmtTime(m.sentAt)}
+                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                            <div
+                              className={cn(
+                                "mt-2 text-[11px] opacity-80",
+                                m.direction === "outbound"
+                                  ? "text-primary-foreground/80"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {fmtTime(m.createdAt)}
                             </div>
                           </motion.div>
                         ))}
@@ -380,7 +367,6 @@ export default function InboxPage() {
 
                 <div className="px-4 pb-3 text-[11px] text-muted-foreground">
                   Data source: <span className="font-mono">/api/messages</span>
-
                 </div>
               </div>
             </div>

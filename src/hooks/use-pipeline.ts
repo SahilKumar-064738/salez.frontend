@@ -6,28 +6,22 @@ export type PipelineContact = {
   name: string;
   phone: string;
   stage: string;
+  created_at?: string | null;
   last_active?: string | null;
   tags?: string[];
 };
+
+export type PipelineResponse = Record<string, PipelineContact[]>;
 
 export function usePipelineContacts() {
   return useQuery({
     queryKey: ["pipeline"],
     queryFn: async () => {
       // Backend: GET /api/pipeline
-      const data = await api.get<any>("/api/pipeline");
+      const data = await api.get<PipelineResponse>("/api/pipeline");
 
-      // backend might return { contacts: [] } OR [] depending on implementation
-      const list = Array.isArray(data) ? data : data?.contacts || data?.pipeline || [];
-
-      return (list as any[]).map((c) => ({
-        id: c.id,
-        name: c.name ?? "Unnamed",
-        phone: c.phone ?? "",
-        stage: c.stage ?? "New",
-        last_active: c.last_active ?? null,
-        tags: c.tags ?? [],
-      })) as PipelineContact[];
+      // data is an object: { New: [...], Contacted: [...], ... }
+      return data || {};
     },
   });
 }
@@ -36,21 +30,43 @@ export function useMovePipelineContact() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { id: number; stage: string }) => {
-      // Backend: PUT /api/contacts/:id
-      // Because pipeline stages are stored in contacts table
-      return api.put(`/api/contacts/${input.id}`, { stage: input.stage });
+    mutationFn: async (input: { contactId: number; stage: string }) => {
+      // Backend: POST /api/pipeline/move
+      return api.post("/api/pipeline/move", {
+        contactId: input.contactId,
+        stage: input.stage,
+      });
     },
 
-    // Optimistic update
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["pipeline"] });
 
-      const prev = qc.getQueryData<any[]>(["pipeline"]);
+      const prev = qc.getQueryData<PipelineResponse>(["pipeline"]);
 
-      qc.setQueryData(["pipeline"], (old: any) => {
-        if (!Array.isArray(old)) return old;
-        return old.map((c) => (c?.id === vars.id ? { ...c, stage: vars.stage } : c));
+      qc.setQueryData<PipelineResponse>(["pipeline"], (old) => {
+        if (!old) return old;
+
+        const next: PipelineResponse = structuredClone(old);
+
+        // remove contact from all stages
+        let moved: PipelineContact | null = null;
+
+        Object.keys(next).forEach((stage) => {
+          const idx = next[stage].findIndex((c) => c.id === vars.contactId);
+          if (idx !== -1) {
+            moved = next[stage][idx];
+            next[stage].splice(idx, 1);
+          }
+        });
+
+        // add to new stage
+        if (moved) {
+          moved.stage = vars.stage;
+          if (!next[vars.stage]) next[vars.stage] = [];
+          next[vars.stage].unshift(moved);
+        }
+
+        return next;
       });
 
       return { prev };

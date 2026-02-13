@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "wouter";
-import type { Contact, Stage } from "@shared/schema";
+import type { Stage } from "@shared/schema";
 import { stages } from "@shared/schema";
 import { usePipelineContacts, useMovePipelineContact } from "@/hooks/use-pipeline";
 import { Card } from "@/components/ui/card";
@@ -19,44 +19,47 @@ export default function PipelinePage() {
 
   const [drag, setDrag] = React.useState<DragState>(null);
 
-  const contacts = (q.data || []) as unknown as Contact[];
+  // backend returns: { "New": [...], "Won": [...], ... }
+  const pipeline = (q.data || {}) as Record<string, any[]>;
 
   const columns = React.useMemo(() => {
-    const map = new Map<Stage, Contact[]>();
+    const map = new Map<Stage, any[]>();
     stages.forEach((s) => map.set(s, []));
-    contacts.forEach((c: any) => {
-      const s = (c.stage || "New") as Stage;
-      if (!map.has(s)) map.set(s, []);
-      map.get(s)!.push(c);
+
+    stages.forEach((s) => {
+      map.set(s, Array.isArray(pipeline?.[s]) ? pipeline[s] : []);
     });
-    stages.forEach((s) => map.set(s, (map.get(s) || []).sort((a: any, b: any) => (a.lastActiveAt < b.lastActiveAt ? 1 : -1))));
+
     return map;
-  }, [contacts]);
+  }, [pipeline]);
 
   const onDropStage = (stage: Stage) => {
     if (!drag) return;
     if (drag.from === stage) return;
 
-    const contact = contacts.find((c: any) => c.id === drag.contactId) as any;
     const prevStage = drag.from;
 
     moveM.mutate(
-      { id: drag.contactId, stage },
+      { contactId: drag.contactId, stage },
       {
         onSuccess: () => {
           toast({
             title: "Moved",
-            description: `${contact?.name || "Lead"} → ${stage}`,
+            description: `Lead moved → ${stage}`,
             action: (
               <Button
                 variant="outline"
                 className="rounded-xl"
                 onClick={() => {
                   moveM.mutate(
-                    { id: drag.contactId, stage: prevStage },
+                    { contactId: drag.contactId, stage: prevStage },
                     {
                       onError: (e) =>
-                        toast({ title: "Undo failed", description: String(e.message || e), variant: "destructive" }),
+                        toast({
+                          title: "Undo failed",
+                          description: String((e as any)?.message || e),
+                          variant: "destructive",
+                        }),
                     },
                   );
                 }}
@@ -68,7 +71,12 @@ export default function PipelinePage() {
             ) as any,
           });
         },
-        onError: (e) => toast({ title: "Move failed", description: String(e.message || e), variant: "destructive" }),
+        onError: (e) =>
+          toast({
+            title: "Move failed",
+            description: String((e as any)?.message || e),
+            variant: "destructive",
+          }),
       },
     );
   };
@@ -82,6 +90,7 @@ export default function PipelinePage() {
             Trello-like stages. Drag leads across columns with optimistic UI + undo.
           </p>
         </div>
+
         <Button variant="outline" className="rounded-xl" onClick={() => q.refetch()} data-testid="pipeline-refresh">
           Refresh
         </Button>
@@ -101,6 +110,7 @@ export default function PipelinePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
             {stages.map((s) => {
               const items = columns.get(s) || [];
+
               return (
                 <div
                   key={s}
@@ -127,7 +137,7 @@ export default function PipelinePage() {
                       <div
                         key={c.id}
                         draggable
-                        onDragStart={() => setDrag({ contactId: c.id, from: c.stage })}
+                        onDragStart={() => setDrag({ contactId: c.id, from: s })}
                         onDragEnd={() => setDrag(null)}
                         className={cn(
                           "rounded-2xl border border-card-border bg-gradient-to-br from-card to-muted/30 p-3 shadow-sm",
@@ -149,6 +159,7 @@ export default function PipelinePage() {
                           <div className="text-[11px] text-muted-foreground">
                             {(c.tags || []).slice(0, 2).join(" · ") || "—"}
                           </div>
+
                           <Link
                             href="/inbox"
                             className="text-[11px] font-semibold text-primary hover:underline"
