@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { StageBadge } from "@/components/StageBadge";
 import { cn } from "@/lib/utils";
-import { Loader2, MessageSquareText, Plus, Search, Tag, X } from "lucide-react";
+import { Loader2, MessageSquareText, Plus, Search, Tag, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { stages } from "@shared/schema";
+import Papa from "papaparse";
 
 function useDebounced<T>(value: T, delay = 250) {
   const [v, setV] = React.useState(value);
@@ -168,6 +169,66 @@ export default function ContactsPage() {
   const updateM = useUpdateContact();
 
   const [edit, setEdit] = React.useState<Contact | null>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
+
+  // CSV Import handler
+ const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results) => {
+      const rows = results.data as any[];
+
+      let success = 0;
+      let skipped = 0;
+
+      for (const row of rows) {
+        // ✅ Normalize fields strictly
+        const name = String(
+          row.name || row.Name || row.NAME || ""
+        ).trim();
+
+        const phone = String(
+          row.phone ||
+          row.Phone ||
+          row.PHONE ||
+          row.mobile ||
+          row.Mobile ||
+          row.MOBILE ||
+          ""
+        ).trim();
+
+        // ❌ Skip invalid rows
+        if (!name || !phone) {
+          skipped++;
+          continue;
+        }
+
+        try {
+          await createM.mutateAsync({
+            name,
+            phone,
+            stage: "New",   // ✅ ALWAYS NEW
+            tags: [],       // ✅ ALWAYS EMPTY
+          });
+          success++;
+        } catch {
+          skipped++;
+        }
+      }
+
+      toast({
+        title: `Imported ${success} contacts`,
+        description: `${skipped} rows skipped.`,
+      });
+
+      e.target.value = "";
+    },
+  });
+};
 
   const contacts = (q.data || []) as unknown as Contact[];
 
@@ -192,7 +253,14 @@ export default function ContactsPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Dialog>
+                {/* CSV Import */}
+                <label className="flex items-center gap-2 cursor-pointer border rounded-xl px-3 py-2 text-sm font-semibold hover:bg-muted transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Import CSV
+                  <input type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+                </label>
+
+                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                   <DialogTrigger asChild>
                     <Button
                       className="rounded-xl bg-gradient-to-br from-primary to-primary/85 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
@@ -212,7 +280,10 @@ export default function ContactsPage() {
                         createM.mutate(
                           { ...data },
                           {
-                            onSuccess: () => toast({ title: "Created", description: "Contact added to your CRM." }),
+                            onSuccess: () => {
+                              toast({ title: "Created", description: "Contact added to your CRM." });
+                              setCreateOpen(false);
+                            },
                             onError: (e) =>
                               toast({
                                 title: "Create failed",

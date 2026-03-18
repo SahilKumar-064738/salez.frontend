@@ -1,29 +1,33 @@
-import { useEffect } from "react";
+import * as React from "react";
 import { useLocation } from "wouter";
-import { getAuthToken } from "@/services/auth";
+import { useAuth } from "@/context/AuthContext";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    // Check if user is authenticated
-    const token = getAuthToken();
-    
-    if (!token) {
-      // Redirect to login if no token
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
       setLocation("/auth/login");
     }
-  }, [setLocation]);
+  }, [isLoading, isAuthenticated, setLocation]);
 
-  // You might want to add loading state here
-  const token = getAuthToken();
-  
-  if (!token) {
-    return null; // or a loading spinner
+  // Spinner while validating token on first load — prevents flash of redirect
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return <>{children}</>;

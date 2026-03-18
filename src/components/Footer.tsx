@@ -4,16 +4,9 @@ import { MessageCircle, Twitter, Linkedin, Facebook } from "lucide-react";
 export function Footer() {
   const [location] = useLocation();
   
-  const isAuthenticatedRoute = [
-    "/inbox",
-    "/contacts",
-    "/pipeline",
-    "/automation",
-    "/broadcast",
-    "/templates",
-    "/analytics",
-    "/billing"
-  ].some(route => location.startsWith(route));
+  const isAuthenticatedRoute =
+    ["/inbox", "/contacts", "/pipeline", "/automation", "/broadcast", "/analytics", "/billing", "/dashboard"]
+      .some(route => location.startsWith(route)) || location === "/templates";
   
   if (isAuthenticatedRoute || location.startsWith("/auth")) return null;
 
@@ -37,17 +30,27 @@ export function Footer() {
               <li><Link href="/" className="hover:text-primary transition-colors">Features</Link></li>
               <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
               <li><Link href="/demo" className="hover:text-primary transition-colors">Interactive Demo</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
+              <li><Link href="/meta-verification" className="hover:text-primary transition-colors">Meta Verification</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-4">Templates</h3>
+            <ul className="space-y-3 text-sm text-slate-500">
+              <li><Link href="/templates/clinics" className="hover:text-primary transition-colors">Clinics</Link></li>
+              <li><Link href="/templates/salons" className="hover:text-primary transition-colors">Salons</Link></li>
+              <li><Link href="/templates/coaching" className="hover:text-primary transition-colors">Coaching</Link></li>
+              <li><Link href="/templates/repairs" className="hover:text-primary transition-colors">Repair Shops</Link></li>
+              <li><Link href="/templates/restaurants" className="hover:text-primary transition-colors">Restaurants</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold text-slate-900 mb-4">Company</h3>
             <ul className="space-y-3 text-sm text-slate-500">
-              <li><Link href="#" className="hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Blog</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+              <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
+              <li><Link href="/terms" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
+              <li><Link href="/terms#privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
 

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Loader2, NotebookPen, Plus, Search } from "lucide-react";
+import { Image, Loader2, NotebookPen, Plus, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function useDebounced<T>(value: T, delay = 250) {
@@ -38,6 +38,15 @@ function TemplateEditor({
   const [content, setContent] = React.useState(initial?.content ?? "");
   const [status, setStatus] = React.useState((initial?.status as any) ?? "Pending");
   const [rejectionReason, setRejectionReason] = React.useState(initial?.rejectionReason ?? "");
+  const [imagePreview, setImagePreview] = React.useState<string>((initial as any)?.imageUrl ?? "");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" data-testid="template-editor">
@@ -65,8 +74,37 @@ function TemplateEditor({
             data-testid="template-content"
           />
           <div className="mt-1 text-[11px] text-muted-foreground">
-            Keep it short. Make replies effortless.
+            Keep it short. Use {"{{name}}"}, {"{{date}}"}, {"{{time}}"} for personalisation.
           </div>
+        </div>
+
+        {/* Image upload (Change 8) */}
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground">Header image (optional)</label>
+          {imagePreview ? (
+            <div className="mt-1 relative rounded-xl overflow-hidden border h-36">
+              <img src={imagePreview} alt="Header preview" className="w-full h-full object-cover" />
+              {!locked && (
+                <button
+                  onClick={() => setImagePreview("")}
+                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            !locked && (
+              <label className="mt-1 flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                <Image className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Add header image</p>
+                  <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Shown above message text.</p>
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={locked} />
+              </label>
+            )
+          )}
         </div>
       </div>
 
@@ -74,6 +112,9 @@ function TemplateEditor({
         <div className="rounded-2xl border border-card-border bg-gradient-to-br from-primary/10 to-accent/10 p-4">
           <div className="text-xs font-semibold text-muted-foreground">Live preview</div>
           <div className="mt-2 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
+            {imagePreview && (
+              <img src={imagePreview} alt="Header" className="rounded-lg mb-3 w-full object-cover max-h-28" />
+            )}
             <div className="text-sm font-semibold">{name || "Untitled template"}</div>
             <div className="mt-2 text-sm whitespace-pre-wrap leading-relaxed text-muted-foreground">
               {content || "Start typing to preview your message…"}
@@ -90,9 +131,7 @@ function TemplateEditor({
               </SelectTrigger>
               <SelectContent>
                 {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -112,7 +151,7 @@ function TemplateEditor({
           ) : null}
 
           <Button
-            onClick={() => onSave({ name, content, status, rejectionReason: rejectionReason || null } as any)}
+            onClick={() => onSave({ name, content, status, rejectionReason: rejectionReason || null, imageUrl: imagePreview || null } as any)}
             disabled={saving || locked || !name.trim() || !content.trim()}
             className="rounded-xl shadow-sm hover:shadow-md transition-all"
             data-testid="template-save"
