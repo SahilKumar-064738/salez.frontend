@@ -51,6 +51,39 @@ const sequences: Record<string, { contact: string; initials: string; messages: M
       { id: 5, text: "✅ Job #QF-4821 Update: Your iPhone screen repair is COMPLETE. Ready for pickup! Amount due: ₹2,499. Store open till 8 PM.", sender: "biz", time: "1:45 PM" },
     ],
   },
+  ecommerce: {
+    contact: "StyleCart India",
+    initials: "SC",
+    messages: [
+      { id: 1, text: "Hi! I ordered a jacket but haven't received it in 5 days?", sender: "user", time: "10:15 AM" },
+      { id: 2, text: "Hi Sneha! Sorry for the delay 🙏 Your order #SC-8821 is out for delivery today. Track live: stylecart.in/track/8821", sender: "biz", time: "10:15 AM" },
+      { id: 3, text: "Got it! Also, can I return the blue one I got last week?", sender: "user", time: "10:16 AM" },
+      { id: 4, text: "Of course! Returns are free within 15 days. Just reply RETURN and we'll arrange a pickup tomorrow. 📦", sender: "biz", time: "10:16 AM" },
+      { id: 5, text: "🛍️ Flash Sale! 40% OFF on winter jackets — only 6 hrs left. Shop: stylecart.in/sale Your saved items are waiting! ❄️", sender: "biz", time: "8:00 PM" },
+    ],
+  },
+  realestate: {
+    contact: "PrimeSpace Realty",
+    initials: "PS",
+    messages: [
+      { id: 1, text: "Hi, I'm interested in 2BHK flats in Wakad under 70L.", sender: "user", time: "3:30 PM" },
+      { id: 2, text: "Hi Vikram! Great choice — Wakad is booming 📈 We have 3 options ready for visit. Can I share brochures for Serene Heights & Green Valley?", sender: "biz", time: "3:30 PM" },
+      { id: 3, text: "Yes, send both. What's the EMI roughly?", sender: "user", time: "3:31 PM" },
+      { id: 4, text: "Sending now! 📄 For ₹65L at 8.5% — EMI ≈ ₹56,000/month. Site visit this Saturday? I'll arrange a cab from your location. 🚗", sender: "biz", time: "3:31 PM" },
+      { id: 5, text: "🏠 Vikram — only 2 units left at pre-launch price in Green Valley. Price increases Monday. Shall I reserve your slot? Reply YES.", sender: "biz", time: "Friday" },
+    ],
+  },
+  ca: {
+    contact: "CA Rajesh & Associates",
+    initials: "RA",
+    messages: [
+      { id: 1, text: "Hi, I need to file my ITR for FY 2024-25. When's the deadline?", sender: "user", time: "11:00 AM" },
+      { id: 2, text: "Hello Priya! Deadline is 31st July 2025 ⚠️ To start, please share: PAN, Form 16, and bank statements for FY24-25. Reply DOCS to get our checklist.", sender: "biz", time: "11:00 AM" },
+      { id: 3, text: "DOCS", sender: "user", time: "11:01 AM" },
+      { id: 4, text: "📋 Sending your document checklist now. Once received, filing takes 2 business days. Book a 15-min call: calendly.com/carajesh ✅", sender: "biz", time: "11:01 AM" },
+      { id: 5, text: "⏰ Reminder: GST return due in 3 days (20th). Upload invoices on portal or reply HELP for assistance. — CA Rajesh & Associates", sender: "biz", time: "17th" },
+    ],
+  },
   restaurants: {
     contact: "The Spice Garden",
     initials: "SG",
@@ -238,6 +271,39 @@ const configs: Record<string, Config> = {
       { name: "Loyalty Reward", preview: "You're our star, Pooja! ⭐ You've dined with us 10 times — enjoy a FREE dessert on your next visit! Valid till Sunday. Show this message. 🎂" },
     ],
   },
+  ecommerce: {
+    title: "E-Commerce Stores", emoji: "🛍️",
+    hero: "Turn browsers into buyers, automatically",
+    desc: "Recover abandoned carts, send order updates, and run flash sales directly on WhatsApp.",
+    useCases: ["Abandoned cart recovery", "Order confirmation & tracking", "Delivery status updates", "Flash sale broadcasts", "Return & refund automation", "Review collection after delivery"],
+    templates: [
+      { name: "Abandoned Cart", preview: "Hey Sneha! 👋 You left 2 items in your cart. Your Floral Kurti (Size M) is still waiting! Tap to complete your order: stylecart.in/cart 🛒 Use code SAVE10 for 10% off!" },
+      { name: "Order Shipped", preview: "📦 Your order #SC-8821 is on its way! Expected delivery: Tomorrow by 8 PM. Track live: stylecart.in/track/8821. Any questions? Just reply here!" },
+      { name: "Flash Sale Alert", preview: "⚡ 4-HOUR FLASH SALE! 40% OFF on winter collection — ends at midnight. Your saved items are included! Shop now: stylecart.in/sale ❄️ Don't miss it!" },
+    ],
+  },
+  realestate: {
+    title: "Real Estate Agents", emoji: "🏠",
+    hero: "Close more deals, miss fewer leads",
+    desc: "Follow up instantly on enquiries, share property brochures, and book site visits via WhatsApp.",
+    useCases: ["Instant lead response", "Property brochure sharing", "Site visit scheduling", "EMI & loan calculator sharing", "Price drop alerts", "Booking follow-up sequences"],
+    templates: [
+      { name: "Lead Follow-Up", preview: "Hi Vikram! 🏡 Thanks for your interest in 2BHK flats in Wakad. We have 3 ready-to-move options under ₹70L. Can I send you brochures + virtual tour links?" },
+      { name: "Site Visit Reminder", preview: "Reminder: Your site visit for Green Valley Phase 2 is tomorrow at 11 AM 📍 Address: Baner-Pashan Link Rd. I'll pick you up from Baner Metro — shall I confirm? 🚗" },
+      { name: "Price Drop Alert", preview: "🔔 Price Drop! The 2BHK you liked at Serene Heights dropped from ₹68L to ₹63L — only 2 units left at this price. Shall I reserve one for you? Valid 48 hrs only." },
+    ],
+  },
+  ca: {
+    title: "Chartered Accountants", emoji: "📊",
+    hero: "Automate compliance, delight clients",
+    desc: "Send tax reminders, collect documents, book appointments, and follow up on pending filings automatically.",
+    useCases: ["ITR filing reminders", "GST return due date alerts", "Document collection requests", "Appointment booking & reminders", "Follow-up on pending submissions", "Advance tax payment reminders"],
+    templates: [
+      { name: "ITR Filing Reminder", preview: "⚠️ ITR Deadline Reminder: Only 15 days left to file your Income Tax Return (FY 2024-25). Please share Form 16 + bank statements to start. Reply DOCS for checklist. — CA Rajesh & Associates" },
+      { name: "Document Request", preview: "Hi Priya! For your GST filing this month, please share: Sales invoices, Purchase invoices, Bank statement. You can WhatsApp photos here directly. Deadline: 20th June 📋" },
+      { name: "Appointment Booking", preview: "Hi! Book a 15-min consultation with CA Rajesh for tax planning, ITR queries, or business registration. Available slots this week: Tue 4PM, Thu 11AM, Fri 3PM. Reply preferred slot. 📅" },
+    ],
+  },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -262,7 +328,7 @@ export default function TemplateLanding({ industry }: { industry: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           {/* Phone simulator */}
           <div className="flex justify-center">
-            <IndustryPhone industry={industry} />
+            <IndustryPhone key={industry} industry={industry} />
           </div>
 
           {/* Use cases */}

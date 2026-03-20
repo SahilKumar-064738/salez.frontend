@@ -8,19 +8,20 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@shared": path.resolve(__dirname, "./shared")
-    }
+      "@shared": path.resolve(__dirname, "./shared"),
+    },
   },
 
   build: {
     outDir: "dist",
-    emptyOutDir: true
+    emptyOutDir: true,
   },
 
   server: {
     proxy: {
+      // Dev proxy: /api/v1/* → http://localhost:5000/api/v1/*
       "/api": {
-        target: "http://localhost:5000", // 👈 backend port
+        target: "http://localhost:5000",
         changeOrigin: true,
         secure: false,
       },

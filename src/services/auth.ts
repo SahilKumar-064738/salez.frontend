@@ -5,9 +5,10 @@ export interface AuthUser {
   email: string;
   name: string;
   companyName: string | null;
+  phone?: string | null;
 }
 
-// Token storage helpers
+// Token storage helpers — key MUST match "auth_token"
 const TOKEN_KEY = "auth_token";
 
 export function getAuthToken(): string | null {
@@ -22,15 +23,19 @@ export function removeAuthToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+// Re-export aliases used by apiClient shim
+export { getAuthToken as getToken, setAuthToken as setToken, removeAuthToken as clearToken };
+
 // Helper to safely normalize user object from backend
 function normalizeUser(data: any): AuthUser {
-  const user = data?.user ?? data;
+  const user = data?.user ?? data?.data?.user ?? data;
 
   return {
     id: Number(user?.id ?? 0),
     email: user?.email ?? "",
     name: user?.name ?? "",
-    companyName: user?.companyName ?? user?.company_name ?? null,
+    companyName: user?.companyName ?? user?.company_name ?? user?.businessName ?? null,
+    phone: user?.phone ?? null,
   };
 }
 
@@ -41,7 +46,7 @@ export async function loginUser(
   email: string,
   password: string
 ): Promise<AuthUser> {
-  const res = await fetch(apiUrl("/auth/login"), {
+  const res = await fetch(apiUrl("/api/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -49,19 +54,13 @@ export async function loginUser(
   });
 
   const text = await res.text();
-
   let data: any = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
 
   if (!res.ok) {
     throw new Error(data?.message || "Login failed");
   }
 
-  // Save token (common backend shapes)
   const token = data?.token ?? data?.accessToken ?? data?.data?.token;
   if (token) setAuthToken(token);
 
@@ -74,35 +73,32 @@ export async function loginUser(
 export async function signupUser(data: {
   name: string;
   companyName?: string;
+  businessName?: string;
   email: string;
   password: string;
+  phone?: string;
 }): Promise<AuthUser> {
-  const res = await fetch(apiUrl("/auth/register"), {
+  const res = await fetch(apiUrl("/api/auth/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
       name: data.name,
-      companyName: data.companyName || null,
+      companyName: data.companyName || data.businessName || null,
       email: data.email,
       password: data.password,
+      phone: data.phone || null,
     }),
   });
 
   const text = await res.text();
-
   let responseData: any = null;
-  try {
-    responseData = text ? JSON.parse(text) : null;
-  } catch {
-    responseData = null;
-  }
+  try { responseData = text ? JSON.parse(text) : null; } catch { responseData = null; }
 
   if (!res.ok) {
     throw new Error(responseData?.message || "Signup failed");
   }
 
-  // Save token (common backend shapes)
   const token =
     responseData?.token ??
     responseData?.accessToken ??
@@ -118,11 +114,10 @@ export async function signupUser(data: {
  */
 export async function fetchMe(): Promise<AuthUser | null> {
   const token = getAuthToken();
-
   if (!token) return null;
 
   try {
-    const res = await fetch(apiUrl("/auth/me"), {
+    const res = await fetch(apiUrl("/api/auth/me"), {
       method: "GET",
       credentials: "include",
       headers: {
@@ -150,16 +145,11 @@ export async function fetchMe(): Promise<AuthUser | null> {
  */
 export async function logoutUser(): Promise<void> {
   const token = getAuthToken();
-
   try {
-    await fetch(apiUrl("/auth/logout"), {
+    await fetch(apiUrl("/api/auth/logout"), {
       method: "POST",
       credentials: "include",
-      headers: token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {},
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   } catch (error) {
     console.error("Logout request failed:", error);

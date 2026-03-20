@@ -18,7 +18,9 @@ export default function Login() {
 
   // Pass navigation as a callback — it fires inside onSuccess, AFTER
   // auth context has stored the token and set the user. No race condition.
-  const login = useLogin(() => setLocation("/inbox"));
+const login = useLogin(() => {
+  setTimeout(() => setLocation("/inbox"), 0);
+});
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
