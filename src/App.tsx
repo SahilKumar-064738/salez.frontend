@@ -32,6 +32,7 @@ import BroadcastPage from "@/pages/BroadcastPage";
 import TemplatesPage from "@/pages/TemplatesPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import BillingPage from "@/pages/BillingPage";
+import WhatsAppSetupPage from "@/pages/WhatsAppSetupPage";
 
 // ─── Layouts ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ function Router() {
       <Route path="/broadcast"><ProtectedRoute><AuthenticatedLayout><BroadcastPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/templates"><ProtectedRoute><AuthenticatedLayout><TemplatesPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/analytics"><ProtectedRoute><AuthenticatedLayout><AnalyticsPage /></AuthenticatedLayout></ProtectedRoute></Route>
+      <Route path="/whatsapp-setup"><ProtectedRoute><AuthenticatedLayout><WhatsAppSetupPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/billing"><ProtectedRoute><AuthenticatedLayout><BillingPage /></AuthenticatedLayout></ProtectedRoute></Route>
 
       <Route component={NotFound} />

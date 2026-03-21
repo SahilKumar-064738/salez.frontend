@@ -8,7 +8,7 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   BarChart3, Bolt, CreditCard, Home, LayoutGrid,
-  LogOut, MessageSquareText, NotebookText, Send, Users2,
+  LogOut, MessageSquareText, MessagesSquare, NotebookText, Send, Users2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -22,8 +22,9 @@ const nav = [
   { href: "/automation", label: "Automation", icon: Bolt },
   { href: "/broadcast",  label: "Broadcast",  icon: Send },
   { href: "/templates",  label: "Templates",  icon: NotebookText },
-  { href: "/analytics",  label: "Analytics",  icon: BarChart3 },
-  { href: "/billing",    label: "Billing",    icon: CreditCard },
+  { href: "/analytics",      label: "Analytics",   icon: BarChart3 },
+  { href: "/whatsapp-setup",  label: "WA Setup",    icon: MessagesSquare },
+  { href: "/billing",         label: "Billing",     icon: CreditCard },
 ] as const;
 
 export function AppSidebar() {
