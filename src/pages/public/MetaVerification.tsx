@@ -5,7 +5,7 @@ const steps = [
   { n: "1", title: "Create Meta Business Account", desc: "Go to business.facebook.com and create your verified business account using your GST or business registration documents." },
   { n: "2", title: "Set Up WhatsApp Business API", desc: "In Meta Business Suite, navigate to WhatsApp Manager and add your phone number. Verify via SMS or voice call." },
   { n: "3", title: "Submit for Business Verification", desc: "Upload your business documents for Meta verification. This usually takes 2–5 business days." },
-  { n: "4", title: "Connect to AutoReply", desc: "Once verified, copy your WhatsApp Business Account ID and access token, then paste them in your AutoReply settings." },
+  { n: "4", title: "Connect to Salez.online", desc: "Once verified, copy your WhatsApp Business Account ID and access token, then paste them in your Salez.online settings." },
 ];
 
 export default function MetaVerification() {
@@ -17,7 +17,7 @@ export default function MetaVerification() {
             <BadgeCheck className="h-4 w-4" /> Meta Official Partner
           </div>
           <h1 className="text-4xl font-bold text-slate-900 mb-4">Get WhatsApp Business API Verified</h1>
-          <p className="text-xl text-slate-500 max-w-2xl mx-auto">Follow these 4 steps to connect your verified WhatsApp number to AutoReply.</p>
+          <p className="text-xl text-slate-500 max-w-2xl mx-auto">Follow these 4 steps to connect your verified WhatsApp number to Salez.online.</p>
         </div>
 
         <div className="space-y-4 mb-14">
@@ -46,7 +46,7 @@ export default function MetaVerification() {
         </div>
 
         <div className="bg-green-50 border border-green-100 rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Already verified? Start using AutoReply today</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Already verified? Start using Salez.online today</h2>
           <p className="text-slate-500 mb-6">Connect your verified WhatsApp number and start broadcasting in minutes.</p>
           <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors">
             Get started <ArrowRight className="h-4 w-4" />

@@ -9,18 +9,18 @@ export default function About() {
           <div className="bg-primary rounded-2xl p-4 inline-block mb-4">
             <MessageCircle className="h-10 w-10 text-white fill-current" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-900">About AutoReply</h1>
+          <h1 className="text-4xl font-bold text-slate-900">About Salez.online</h1>
           <p className="mt-3 text-slate-500 text-lg">We help small businesses grow through the power of WhatsApp automation.</p>
         </div>
 
         <div className="space-y-5 text-slate-600 text-base leading-relaxed">
-          <p>AutoReply was founded with a simple idea: <strong className="text-slate-900">every business already uses WhatsApp</strong>. The challenge is turning those chats into a scalable, automated sales and CRM system.</p>
-          <p>We built AutoReply as the most affordable, easiest-to-use WhatsApp CRM designed for clinics, coaching centres, salons, repair shops, and other local businesses that want to grow without hiring a large team.</p>
+          <p>Salez.online was founded with a simple idea: <strong className="text-slate-900">every business already uses WhatsApp</strong>. The challenge is turning those chats into a scalable, automated sales and CRM system.</p>
+          <p>We built Salez.online as the most affordable, easiest-to-use WhatsApp CRM designed for clinics, coaching centres, salons, repair shops, and other local businesses that want to grow without hiring a large team.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
           {[
-            { icon: Users,  title: "10,000+ businesses",   desc: "Active businesses using AutoReply across India" },
+            { icon: Users,  title: "10,000+ businesses",   desc: "Active businesses using Salez.online across India" },
             { icon: Globe,  title: "50M+ messages sent",   desc: "WhatsApp messages delivered through our platform" },
             { icon: Heart,  title: "4.9★ rating",          desc: "Average rating from users across all plans" },
           ].map(s => (

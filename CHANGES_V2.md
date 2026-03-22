@@ -1,4 +1,4 @@
-# AutoReply v2 — Complete Fix & Redesign Changelog
+# Salez.online v2 — Complete Fix & Redesign Changelog
 
 ## 🚨 Bug Fix #1: Login White Screen (Root Cause + Fix)
 

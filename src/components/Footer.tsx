@@ -17,7 +17,7 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 font-bold text-xl text-slate-900">
               <MessageCircle className="h-6 w-6 text-primary fill-current" />
-              <span>AutoReply</span>
+              <span>Salez.online</span>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed">
               Automated Business follow-ups that turn cold leads into paying customers. Stop chasing, start closing.
@@ -65,7 +65,7 @@ export function Footer() {
         </div>
         
         <div className="mt-12 pt-8 border-t border-slate-200 text-center text-sm text-slate-400">
-          © {new Date().getFullYear()} AutoReply SaaS. All rights reserved.
+          © {new Date().getFullYear()} Salez.online SaaS. All rights reserved.
         </div>
       </div>
     </footer>

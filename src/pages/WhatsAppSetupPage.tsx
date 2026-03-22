@@ -285,7 +285,7 @@ export default function WhatsAppSetupPage() {
     documents_required: [...checkedDocs, ...customDocs],
     policies: { payment_terms: payTerms, cancellation_refund: refund, privacy_confidentiality: privacy, turnaround_time: turnaround, other: otherPolicy },
     faqs: faqs.filter(f => f.question),
-    meta: { generated_at: new Date().toISOString(), schema_version: "2.0", platform: "AutoReply" },
+    meta: { generated_at: new Date().toISOString(), schema_version: "2.0", platform: "Salez.online" },
   });
 
   const jsonStr = React.useMemo(() => JSON.stringify(buildJSON(), null, 2), [

@@ -1,4 +1,4 @@
-# AutoReply — WhatsApp CRM Frontend
+# Salez.online — WhatsApp CRM Frontend
 
 ## Quick Start
 

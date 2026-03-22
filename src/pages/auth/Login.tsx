@@ -42,7 +42,7 @@ const login = useLogin(() => {
           <Link href="/">
             <div className="inline-flex items-center gap-2 mb-6 cursor-pointer">
               <MessageCircle className="h-8 w-8 text-primary fill-current" />
-              <span className="text-2xl font-bold text-slate-900">AutoReply</span>
+              <span className="text-2xl font-bold text-slate-900">Salez.online</span>
             </div>
           </Link>
           <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>

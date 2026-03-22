@@ -38,11 +38,11 @@ const templates = [
 ];
 
 const faqs = [
-  { q: "Do I need a WhatsApp Business API account?", a: "Yes. AutoReply connects to the official WhatsApp Business API. We guide you through verification — most businesses are live within 24 hours." },
+  { q: "Do I need a WhatsApp Business API account?", a: "Yes. Salez.online connects to the official WhatsApp Business API. We guide you through verification — most businesses are live within 24 hours." },
   { q: "Is bulk messaging allowed by WhatsApp?", a: "Yes. We only use official, WhatsApp-approved API methods. No grey-area tools, no risk of account ban." },
   { q: "What industries is this best for?", a: "Any business that manages leads or repeat customers via WhatsApp: e-commerce, real estate, coaching, clinics, CA firms, salons, repair shops, and more." },
   { q: "Can I cancel anytime?", a: "Yes. No long-term contracts. Cancel from your billing page at any time — effective at the end of your billing period." },
-  { q: "How is AutoReply different from just using WhatsApp Business App?", a: "WhatsApp Business App is manual — you reply yourself. AutoReply adds automation, broadcast campaigns, analytics, and a unified inbox so your business can scale without adding headcount." },
+  { q: "How is Salez.online different from just using WhatsApp Business App?", a: "WhatsApp Business App is manual — you reply yourself. Salez.online adds automation, broadcast campaigns, analytics, and a unified inbox so your business can scale without adding headcount." },
 ];
 
 export default function Landing() {
@@ -80,7 +80,7 @@ export default function Landing() {
               </motion.h1>
 
               <motion.p variants={fadeUp} className="text-xl text-slate-500 leading-relaxed max-w-lg">
-                Save 3–5 hours daily. Never miss a lead again. AutoReply handles follow-ups, broadcasts, and customer engagement — all on autopilot.
+                Save 3–5 hours daily. Never miss a lead again. Salez.online handles follow-ups, broadcasts, and customer engagement — all on autopilot.
               </motion.p>
 
               <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4">
@@ -296,7 +296,7 @@ export default function Landing() {
               <span className="text-primary">Close more leads faster.</span>
             </h2>
             <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Set up AutoReply in under 24 hours and start automating the conversations that drive your business.
+              Set up Salez.online in under 24 hours and start automating the conversations that drive your business.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/signup">

@@ -68,7 +68,7 @@ export function Navbar() {
             className="flex items-center gap-2 font-bold text-xl text-slate-900"
           >
             <MessageCircle className="h-6 w-6 text-primary fill-current" />
-            <span>AutoReply</span>
+            <span>Salez.online</span>
           </Link>
 
           {/* Desktop Nav */}
