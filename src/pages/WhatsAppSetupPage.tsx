@@ -348,7 +348,7 @@ export default function WhatsAppSetupPage() {
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full border border-primary/20 mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          WhatsApp Automation Setup
+          Business Automation Setup
         </div>
         <h1 className="text-2xl font-bold">Set Up Your Business Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">Works for any industry · Takes about 5 minutes · Your data personalises every automated message.</p>

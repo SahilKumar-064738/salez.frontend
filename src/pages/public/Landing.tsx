@@ -61,14 +61,16 @@ export default function Landing() {
             <motion.div initial="hidden" animate="show" variants={stagger} className="lg:w-1/2 space-y-7">
               <motion.div variants={fadeUp}>
                 <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full border border-green-200">
-                  <Zap className="h-3.5 w-3.5" /> WhatsApp Automation for Indian Businesses
+                  <Zap className="h-3.5 w-3.5" /> WhatsApp and Call Automation for Indian Businesses
                 </span>
               </motion.div>
 
               <motion.h1 variants={fadeUp} className="text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.08]">
                 Automate your{" "}
-                <span className="text-primary">WhatsApp</span>{" "}
+                <br />
+                <span className="text-primary">Business</span>{" "}
                 and{" "}
+                <br />  
                 <span className="relative inline-block">
                   grow faster
                   <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 300 12" fill="none">
@@ -84,7 +86,7 @@ export default function Landing() {
               <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4">
                 <Link href="/auth/signup">
                   <Button size="lg" className="text-base px-8 py-6 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all font-bold">
-                    Start Automating WhatsApp <ArrowRight className="ml-2 h-5 w-5" />
+                    Start Automating Business <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
                 <Link href="/demo">
@@ -126,7 +128,7 @@ export default function Landing() {
       <section className="py-24 bg-slate-50 border-b border-slate-100">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-3xl mx-auto mb-14">
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Why businesses lose customers on WhatsApp</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Why businesses lose customers</h2>
             <p className="text-slate-500 text-lg">Manual follow-ups are slow, inconsistent, and impossible to scale.</p>
           </motion.div>
 
@@ -299,7 +301,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/signup">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold text-lg px-12 py-7 rounded-xl shadow-2xl shadow-primary/30 hover:scale-105 transition-all">
-                  Start Automating WhatsApp <ArrowRight className="ml-2 h-5 w-5" />
+                  Start Automating Business <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/pricing">

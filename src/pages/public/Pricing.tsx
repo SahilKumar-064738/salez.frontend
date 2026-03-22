@@ -187,7 +187,7 @@ export default function Pricing() {
           <p className="text-slate-500 text-lg mb-8">Get started today. Setup takes less than 24 hours.</p>
           <Link href="/auth/signup">
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold text-base px-10 py-6 rounded-xl shadow-xl shadow-primary/25">
-              Start Automating WhatsApp <ArrowRight className="ml-2 h-5 w-5" />
+              Start Automating Business <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
           <p className="mt-4 text-sm text-slate-400">Official WhatsApp API · No long-term commitment · Cancel anytime</p>

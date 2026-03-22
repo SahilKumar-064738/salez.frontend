@@ -20,7 +20,7 @@ export function Footer() {
               <span>AutoReply</span>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Automated WhatsApp follow-ups that turn cold leads into paying customers. Stop chasing, start closing.
+              Automated Business follow-ups that turn cold leads into paying customers. Stop chasing, start closing.
             </p>
           </div>
 
