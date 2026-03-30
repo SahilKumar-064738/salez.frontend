@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "wouter";
 import type { Stage } from "@shared/schema";
-import { stages } from "@shared/schema";
+import { stages, stageLabels } from "@shared/schema";
 import { usePipelineContacts, useMovePipelineContact } from "@/hooks/use-pipeline";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function PipelinePage() {
 
   const [drag, setDrag] = React.useState<DragState>(null);
 
-  // backend returns: { "New": [...], "Won": [...], ... }
+  // backend returns contacts grouped by stage: { new: [...], contacted: [...], ... }
   const pipeline = (q.data || {}) as Record<string, any[]>;
 
   const columns = React.useMemo(() => {
@@ -125,7 +125,7 @@ export default function PipelinePage() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <StageBadge stage={s} />
-                      <div className="text-sm font-semibold">{s}</div>
+                      <div className="text-sm font-semibold">{stageLabels[s]}</div>
                     </div>
                     <div className="text-xs text-muted-foreground" data-testid={`pipeline-count-${s}`}>
                       {items.length}

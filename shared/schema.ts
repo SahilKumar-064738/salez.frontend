@@ -65,14 +65,23 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type AutomationRule = typeof automationRules.$inferSelect;
 export type InsertAutomationRule = z.infer<typeof insertRuleSchema>;
 export const stages = [
-  "New",
-  "Engaged",
-  "Interested",
-  "Paid",
-  "Lost",
+  "new",
+  "contacted",
+  "qualified",
+  "converted",
+  "lost",
 ] as const;
 
 export type Stage = (typeof stages)[number];
+
+// Display labels for stages (Title Case for UI)
+export const stageLabels: Record<Stage, string> = {
+  new: "New",
+  contacted: "Contacted",
+  qualified: "Qualified",
+  converted: "Converted",
+  lost: "Lost",
+};
 
 
 // Request Types
@@ -87,4 +96,33 @@ export type PipelineMoveRequest = { stage: string };
 export type ContactResponse = Contact;
 export type MessageResponse = Message;
 export type RuleResponse = AutomationRule;
+
+// ── Template (frontend shape — maps to /api/v1/campaigns/templates) ──────────
+export type Template = {
+  id: number;
+  name: string;
+  content: string;
+  variables?: string[];
+  category?: "marketing" | "utility" | "authentication" | null;
+  status?: "approved" | "pending" | "rejected" | null;
+  rejectionReason?: string | null;
+  created_at?: string;
+};
+
+// ── Campaign (frontend shape — maps to /api/v1/campaigns) ────────────────────
+export type Campaign = {
+  id: number;
+  name: string;
+  templateId: number;
+  templateName?: string | null;
+  whatsappAccountId?: number | null;
+  scheduledAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  status?: "draft" | "scheduled" | "running" | "completed" | "cancelled" | null;
+  totalRecipients?: number;
+  sentCount?: number;
+  failedCount?: number;
+  created_at?: string;
+};
 

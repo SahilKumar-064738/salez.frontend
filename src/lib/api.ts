@@ -1,6 +1,7 @@
 import { getAuthToken } from "@/services/auth";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// ⚠️ FIX (Issue 8): Was "localhost:5000". Backend runs on 4000.
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export function apiUrl(path: string): string {
   const finalPath = path.startsWith("/") ? path : `/${path}`;
@@ -31,9 +32,10 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({
-      message: response.statusText || "Request failed",
+      error: response.statusText || "Request failed",
     }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    // Backend error envelope: { success: false, error: "msg", code: "CODE" }
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
   return response.json();

@@ -14,7 +14,7 @@ import { StageBadge } from "@/components/StageBadge";
 import { cn } from "@/lib/utils";
 import { Loader2, MessageSquareText, Plus, Search, Tag, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { stages } from "@shared/schema";
+import { stages, stageLabels } from "@shared/schema";
 import Papa from "papaparse";
 
 function useDebounced<T>(value: T, delay = 250) {
@@ -68,7 +68,7 @@ function ContactEditor({
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [phone, setPhone] = React.useState(initial?.phone ?? "");
-  const [stage, setStage] = React.useState<Stage>((initial?.stage as any) ?? "New");
+  const [stage, setStage] = React.useState<Stage>((initial?.stage as any) ?? "new");
   const [tagsRaw, setTagsRaw] = React.useState((initial?.tags as any)?.join(", ") ?? "");
 
  const tags = React.useMemo(() => {
@@ -116,7 +116,7 @@ function ContactEditor({
             <SelectContent>
               {stages.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {stageLabels[s]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -211,7 +211,7 @@ export default function ContactsPage() {
           await createM.mutateAsync({
             name,
             phone,
-            stage: "New",   // ✅ ALWAYS NEW
+            stage: "new",   // ✅ ALWAYS NEW
             tags: [],       // ✅ ALWAYS EMPTY
           });
           success++;
@@ -330,7 +330,7 @@ export default function ContactsPage() {
                   <SelectItem value="all">All stages</SelectItem>
                   {stages.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {s}
+                      {stageLabels[s]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -450,7 +450,7 @@ export default function ContactsPage() {
                                 <SelectItem key={s} value={s}>
                                   <div className="flex items-center gap-2">
                                     <StageBadge stage={s} />
-                                    <span>{s}</span>
+                                    <span>{stageLabels[s]}</span>
                                   </div>
                                 </SelectItem>
                               ))}

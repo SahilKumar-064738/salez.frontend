@@ -1,7 +1,7 @@
 /**
  * src/services/authService.ts
  * Thin wrapper that delegates to services/auth.ts.
- * Keeps the new version's authService interface intact.
+ * Field names updated to match backend contract (Issue 1).
  */
 
 import { loginUser, signupUser, fetchMe, getAuthToken, setAuthToken, removeAuthToken } from "@/services/auth";
@@ -15,11 +15,11 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-  name: string;
+  name: string;          // maps to displayName in the API call
   email: string;
   password: string;
-  companyName?: string;
-  phone?: string;
+  companyName?: string;  // maps to businessName in the API call
+  phone?: string;        // accepted here, not forwarded (not in backend schema)
 }
 
 export interface ChangePasswordPayload {
@@ -32,7 +32,6 @@ export const authService = {
    * Login — returns { token, user } so AuthContext can store both
    */
   async login(payload: LoginPayload): Promise<{ token: string; user: AuthUser }> {
-    // loginUser stores token in localStorage and returns user
     const user = await loginUser(payload.email, payload.password);
     const token = getAuthToken();
     if (!token) throw new Error("Token not received from server");
@@ -41,14 +40,15 @@ export const authService = {
 
   /**
    * Register — returns { token, user }
+   * FIX (Issue 1): passes name as displayName, companyName as businessName
    */
   async register(payload: RegisterPayload): Promise<{ token: string; user: AuthUser }> {
     const user = await signupUser({
-      name: payload.name,
+      name: payload.name,           // signupUser maps this to displayName
+      companyName: payload.companyName,
       email: payload.email,
       password: payload.password,
-      companyName: payload.companyName,
-      phone: payload.phone,
+      // phone intentionally not forwarded — not in backend RegisterSchema
     });
     const token = getAuthToken();
     if (!token) throw new Error("Token not received from server");
@@ -56,7 +56,7 @@ export const authService = {
   },
 
   /**
-   * Get current user from /api/auth/me
+   * Get current user from /api/v1/auth/me
    */
   async me(): Promise<AuthUser | null> {
     return fetchMe();

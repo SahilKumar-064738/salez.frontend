@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Campaign, Contact, Stage, Template } from "@shared/schema";
-import { stages } from "@shared/schema";
+import { stages, stageLabels } from "@shared/schema";
 import { useCampaigns, useCreateCampaign, useUpdateCampaign } from "@/hooks/use-broadcast";
 import { useContacts } from "@/hooks/use-contacts";
 import { useTemplates } from "@/hooks/use-templates";
@@ -137,9 +137,10 @@ export default function BroadcastPage() {
 
     const payload: any = {
       name,
-      status,
-      templateId: templateId === "none" ? null : Number(templateId),
+      templateId: templateId === "none" ? 0 : Number(templateId),
+      whatsappAccountId: 1, // default — user should select from connected accounts
       scheduledAt,
+      contactIds: audience.map((c: any) => c.id).filter(Boolean),
     };
 
     createM.mutate(payload, {
@@ -269,7 +270,7 @@ export default function BroadcastPage() {
                                 <SelectTrigger className="mt-1 rounded-xl focus-ring" data-testid="broadcast-audience-stage"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="all">All stages</SelectItem>
-                                  {stages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                  {stages.map(s => <SelectItem key={s} value={s}>{stageLabels[s]}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -304,7 +305,7 @@ export default function BroadcastPage() {
                           <div className="mt-2 flex items-baseline justify-between">
                             <div className="text-2xl font-bold" data-testid="broadcast-audience-count">{audience.length}</div>
                             <Badge variant="outline" className="rounded-full">
-                              {audSource === "csv" ? "CSV import" : `${audStage === "all" ? "All stages" : `Stage: ${audStage}`}${audTag ? ` • Tag: ${audTag}` : ""}`}
+                              {audSource === "csv" ? "CSV import" : `${audStage === "all" ? "All stages" : `Stage: ${stageLabels[audStage as any] ?? audStage}`}${audTag ? ` • Tag: ${audTag}` : ""}`}
                             </Badge>
                           </div>
                           <div className="mt-3 text-xs text-muted-foreground">

@@ -1,43 +1,17 @@
-import { apiUrl } from "@/lib/api";
+/**
+ * src/services/leads.ts
+ *
+ * DEPRECATED — This file used /api/leads which does not exist in the backend.
+ *
+ * The backend does not have a /leads resource.
+ * "Leads" are contacts at the "new" or "contacted" stage.
+ * Use contactsService from "@/services/contactsService" with a stage filter:
+ *
+ *   contactsService.list({ stage: "new" })
+ *   contactsService.list({ stage: "contacted" })
+ *
+ * This file re-exports contactsService to avoid breaking existing imports.
+ */
 
-export async function fetchLeads() {
-  const res = await fetch(apiUrl("/api/leads"), { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch leads");
-  return res.json();
-}
+export { contactsService as leadsService } from "@/services/contactsService";
 
-export async function fetchLead(id: number) {
-  const res = await fetch(apiUrl(`/api/leads/${id}`), { credentials: "include" });
-  if (!res.ok) throw new Error("Lead not found");
-  return res.json();
-}
-
-export async function createLead(data: { name: string; phone: string; status?: string }) {
-  const res = await fetch(apiUrl("/api/leads"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to create lead");
-  return res.json();
-}
-
-export async function updateLead(id: number, data: { name?: string; phone?: string; status?: string }) {
-  const res = await fetch(apiUrl(`/api/leads/${id}`), {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to update lead");
-  return res.json();
-}
-
-export async function deleteLead(id: number) {
-  const res = await fetch(apiUrl(`/api/leads/${id}`), {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok && res.status !== 204) throw new Error("Failed to delete lead");
-}

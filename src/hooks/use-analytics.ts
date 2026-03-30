@@ -1,14 +1,22 @@
+/**
+ * src/hooks/use-analytics.ts
+ *
+ * Backend contract (all under /api/v1 via apiClient):
+ *   GET /analytics/summary
+ *   GET /analytics/messages?startDate=...&endDate=...
+ *   GET /analytics/campaigns
+ *   GET /analytics/campaigns/:id
+ */
+
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { apiGet } from "@/lib/apiClient";
 
 export type AnalyticsSummary = {
   totalContacts: number;
   contactsByStage: { stage: string; count: string }[];
-
   totalMessages: number;
   messagesSent: number;
   messagesReceived: number;
-
   activeCampaigns: number;
   messagesLast30Days: number;
 };
@@ -17,8 +25,8 @@ export function useAnalyticsSummary() {
   return useQuery({
     queryKey: ["analytics", "summary"],
     queryFn: async () => {
-      // Backend: GET /api/analytics/summary
-      return api.get<AnalyticsSummary>("/api/analytics/summary");
+      const raw = await apiGet<any>("/analytics/summary");
+      return (raw?.data ?? raw ?? {}) as AnalyticsSummary;
     },
   });
 }
@@ -36,16 +44,11 @@ export function useMessageAnalytics(params?: { startDate?: string; endDate?: str
   return useQuery({
     queryKey: ["analytics", "messages", params || {}],
     queryFn: async () => {
-      // Backend: GET /api/analytics/messages?startDate=...&endDate=...
-      const qs = new URLSearchParams();
-      if (params?.startDate) qs.set("startDate", params.startDate);
-      if (params?.endDate) qs.set("endDate", params.endDate);
-
-      const url = qs.toString()
-        ? `/api/analytics/messages?${qs.toString()}`
-        : `/api/analytics/messages`;
-
-      return api.get<AnalyticsMessages>(url);
+      const queryParams: Record<string, string> = {};
+      if (params?.startDate) queryParams.startDate = params.startDate;
+      if (params?.endDate) queryParams.endDate = params.endDate;
+      const raw = await apiGet<any>("/analytics/messages", { params: queryParams });
+      return (raw?.data ?? raw ?? {}) as AnalyticsMessages;
     },
   });
 }
@@ -61,8 +64,8 @@ export function useCampaignAnalytics(campaignId?: number) {
     enabled: !!campaignId,
     queryKey: ["analytics", "campaign", campaignId],
     queryFn: async () => {
-      // Backend: GET /api/analytics/campaigns/:id
-      return api.get<CampaignAnalytics>(`/api/analytics/campaigns/${campaignId}`);
+      const raw = await apiGet<any>(`/analytics/campaigns/${campaignId}`);
+      return (raw?.data ?? raw ?? {}) as CampaignAnalytics;
     },
   });
 }
@@ -83,8 +86,8 @@ export function useCampaignsAnalytics() {
   return useQuery({
     queryKey: ["analytics", "campaigns"],
     queryFn: async () => {
-      // Backend: GET /api/analytics/campaigns
-      return api.get<CampaignsAnalyticsSummary>("/api/analytics/campaigns");
+      const raw = await apiGet<any>("/analytics/campaigns");
+      return (raw?.data ?? raw ?? {}) as CampaignsAnalyticsSummary;
     },
   });
 }
@@ -101,8 +104,8 @@ export function useDashboardAnalytics() {
   return useQuery({
     queryKey: ["analytics", "dashboard"],
     queryFn: async () => {
-      // Backend: GET /api/analytics/dashboard
-      return api.get<DashboardAnalytics>("/api/analytics/dashboard");
+      const raw = await apiGet<any>("/analytics/summary");
+      return (raw?.data ?? raw ?? {}) as DashboardAnalytics;
     },
   });
 }

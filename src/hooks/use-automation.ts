@@ -1,9 +1,21 @@
+/**
+ * src/hooks/use-automation.ts
+ *
+ * Backend contract (all under /api/v1 via apiClient):
+ *   GET    /automation        list rules
+ *   POST   /automation        create rule
+ *   PUT    /automation/:id    update rule
+ *   DELETE /automation/:id    delete rule
+ *
+ * The old code used api.get("/api/automation") which bypasses the /v1 prefix.
+ * Now uses apiClient wrappers which correctly prefix /api/v1.
+ */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/apiClient";
 
 export type AutomationRule = {
   id: number;
-  business_id: number;
   trigger: string;
   condition: any;
   action: any;
@@ -15,9 +27,13 @@ export function useAutomationRules() {
   return useQuery({
     queryKey: ["automation"],
     queryFn: async () => {
-      // Backend: GET /api/automation (returns array)
-      const data = await api.get<any[]>("/api/automation");
-      return (data || []) as AutomationRule[];
+      try {
+        const raw = await apiGet<any>("/automation");
+        const list = raw?.data ?? raw ?? [];
+        return (Array.isArray(list) ? list : []) as AutomationRule[];
+      } catch {
+        return [] as AutomationRule[];
+      }
     },
   });
 }
@@ -32,8 +48,8 @@ export function useCreateAutomationRule() {
       action: any;
       delayMinutes?: number;
     }) => {
-      // Backend: POST /api/automation
-      return api.post<AutomationRule>("/api/automation", input);
+      const raw = await apiPost<any>("/automation", input);
+      return (raw?.data ?? raw) as AutomationRule;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["automation"] });
@@ -54,8 +70,8 @@ export function useUpdateAutomationRule() {
         delayMinutes: number;
       }>;
     }) => {
-      // Backend: PUT /api/automation/:id
-      return api.put<AutomationRule>(`/api/automation/${input.id}`, input.updates);
+      const raw = await apiPut<any>(`/automation/${input.id}`, input.updates);
+      return (raw?.data ?? raw) as AutomationRule;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["automation"] });
@@ -68,8 +84,7 @@ export function useDeleteAutomationRule() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      // Backend: DELETE /api/automation/:id
-      return api.delete(`/api/automation/${id}`);
+      await apiDelete(`/automation/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["automation"] });

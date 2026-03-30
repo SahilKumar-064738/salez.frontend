@@ -1,47 +1,88 @@
-import { apiUrl } from "@/lib/api";
+/**
+ * src/services/automation.ts
+ *
+ * Backend contract (all under /api/v1 via apiClient):
+ *   GET    /automation        list rules
+ *   POST   /automation        create rule
+ *   PUT    /automation/:id    update rule
+ *   DELETE /automation/:id    delete rule
+ *
+ * The old /api/rules and /api/reminders endpoints do not exist.
+ * Reminders are not a backend resource — use scheduledAt on campaigns instead.
+ */
 
-// ─── Rules ──────────────────────────────────────────────────────────────────
-export async function fetchRules() {
-  const res = await fetch(apiUrl("/api/rules"), { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch rules");
-  return res.json();
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/apiClient";
+
+export interface AutomationRule {
+  id: number;
+  trigger: string;
+  condition: any;
+  action: any;
+  delay_minutes: number;
+  created_at?: string;
 }
 
-export async function createRule(data: { userId: number; delayHours: number; templateId: number; order: number }) {
-  const res = await fetch(apiUrl("/api/rules"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ user_id: data.userId, delay_hours: data.delayHours, template_id: data.templateId, order: data.order }),
-  });
-  if (!res.ok) throw new Error("Failed to create rule");
-  return res.json();
+function normalize(r: any): AutomationRule {
+  return {
+    id: Number(r.id),
+    trigger: r.trigger ?? "",
+    condition: r.condition ?? {},
+    action: r.action ?? {},
+    delay_minutes: Number(r.delay_minutes ?? r.delayMinutes ?? 0),
+    created_at: r.created_at,
+  };
 }
 
-export async function deleteRule(id: number) {
-  const res = await fetch(apiUrl(`/api/rules/${id}`), { method: "DELETE", credentials: "include" });
-  if (!res.ok && res.status !== 204) throw new Error("Failed to delete rule");
+export async function fetchRules(): Promise<AutomationRule[]> {
+  try {
+    const raw = await apiGet<any>("/automation");
+    const list = raw?.data ?? raw ?? [];
+    return (Array.isArray(list) ? list : []).map(normalize);
+  } catch {
+    return [];
+  }
 }
 
-// ─── Reminders ──────────────────────────────────────────────────────────────
-export async function fetchReminders() {
-  const res = await fetch(apiUrl("/api/reminders"), { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch reminders");
-  return res.json();
+export async function createRule(data: {
+  trigger: string;
+  condition: any;
+  action: any;
+  delayMinutes?: number;
+}): Promise<AutomationRule> {
+  const raw = await apiPost<any>("/automation", data);
+  return normalize(raw?.data ?? raw);
 }
 
-export async function createReminder(data: { leadId: number; message: string; scheduledAt: string; type?: string }) {
-  const res = await fetch(apiUrl("/api/reminders"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ lead_id: data.leadId, message: data.message, scheduled_at: data.scheduledAt, type: data.type || "follow-up" }),
-  });
-  if (!res.ok) throw new Error("Failed to create reminder");
-  return res.json();
+export async function updateRule(
+  id: number,
+  data: Partial<{ trigger: string; condition: any; action: any; delayMinutes: number }>
+): Promise<AutomationRule> {
+  const raw = await apiPut<any>(`/automation/${id}`, data);
+  return normalize(raw?.data ?? raw);
 }
 
-export async function deleteReminder(id: number) {
-  const res = await fetch(apiUrl(`/api/reminders/${id}`), { method: "DELETE", credentials: "include" });
-  if (!res.ok && res.status !== 204) throw new Error("Failed to delete reminder");
+export async function deleteRule(id: number): Promise<void> {
+  await apiDelete(`/automation/${id}`);
+}
+
+// ── Reminders ─────────────────────────────────────────────────────────────────
+// Reminders are not a backend resource. The backend handles scheduling via
+// campaign.scheduledAt. These stubs exist to prevent compile errors.
+
+export async function fetchReminders(): Promise<any[]> {
+  console.warn("fetchReminders: /api/reminders does not exist. Use campaign scheduledAt instead.");
+  return [];
+}
+
+export async function createReminder(_data: {
+  leadId: number;
+  message: string;
+  scheduledAt: string;
+  type?: string;
+}): Promise<never> {
+  throw new Error("createReminder: /api/reminders does not exist. Schedule via campaigns instead.");
+}
+
+export async function deleteReminder(_id: number): Promise<void> {
+  console.warn("deleteReminder: /api/reminders does not exist.");
 }

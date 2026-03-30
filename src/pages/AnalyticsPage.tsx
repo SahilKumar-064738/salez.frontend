@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RTooltip, CartesianGrid } from "recharts";
 import { Loader2, TrendingUp } from "lucide-react";
-import { stages } from "@shared/schema";
+import { stages, stageLabels } from "@shared/schema";
 
 function pct(v: number) {
   return `${Math.round(v * 100)}%`;

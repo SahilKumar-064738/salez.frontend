@@ -1,24 +1,18 @@
-import { apiUrl } from "@/lib/api";
+/**
+ * src/services/conversations.ts
+ *
+ * DEPRECATED — This file used /api/conversations which does not exist.
+ *
+ * The backend does not have a /conversations resource.
+ * Conversations are accessed via:
+ *   GET  /api/v1/messages/inbox                     — inbox list
+ *   GET  /api/v1/messages/conversation/:contactId   — message thread
+ *   POST /api/v1/messages/send                      — send message
+ *
+ * Use messagesService from "@/services/messagesService" instead.
+ * This file re-exports messagesService methods to avoid breaking any
+ * existing imports until callers are updated.
+ */
 
-export async function fetchConversations() {
-  const res = await fetch(apiUrl("/api/conversations"), { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch conversations");
-  return res.json();
-}
+export { messagesService as conversationsService } from "@/services/messagesService";
 
-export async function fetchConversation(id: number) {
-  const res = await fetch(apiUrl(`/api/conversations/${id}`), { credentials: "include" });
-  if (!res.ok) throw new Error("Conversation not found");
-  return res.json();
-}
-
-export async function sendMessage(conversationId: number, content: string) {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ content }),
-  });
-  if (!res.ok) throw new Error("Failed to send message");
-  return res.json();
-}
