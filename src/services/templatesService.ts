@@ -16,7 +16,7 @@
  *   category: "marketing" | "utility" | "authentication"
  */
 
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/apiClient";
 
 export interface Template {
   id: number;
@@ -78,7 +78,7 @@ export const templatesService = {
       category: "marketing" | "utility" | "authentication" | null;
     }>
   ): Promise<Template> {
-    const raw = await apiPut<any>(`/campaigns/templates/${id}`, data);
+    const raw = await apiPatch<any>(`/campaigns/templates/${id}`, data);
     return normalize(raw?.data ?? raw);
   },
 

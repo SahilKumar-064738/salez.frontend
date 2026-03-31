@@ -5,7 +5,7 @@ export function Footer() {
   const [location] = useLocation();
   
   const isAuthenticatedRoute =
-    ["/inbox", "/contacts", "/pipeline", "/automation", "/broadcast", "/analytics", "/billing", "/dashboard"]
+    ["/inbox", "/contacts", "/pipeline", "/broadcast", "/analytics", "/pricing", "/dashboard"]
       .some(route => location.startsWith(route)) || location === "/templates";
   
   if (isAuthenticatedRoute || location.startsWith("/auth")) return null;

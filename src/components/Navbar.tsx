@@ -23,7 +23,7 @@ const DASHBOARD_ROUTES = [
   "/automation",
   "/broadcast",
   "/analytics",
-  "/billing",
+  "/whatsapp-setup",
   "/dashboard",
 ];
 

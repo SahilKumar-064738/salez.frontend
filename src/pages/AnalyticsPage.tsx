@@ -1,125 +1,207 @@
 import * as React from "react";
-import { useAnalyticsSummary } from "@/hooks/use-analytics";
+import { useAnalyticsSummary, useMessageAnalytics, useCampaignsAnalytics } from "@/hooks/use-analytics";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MetricCard } from "@/components/MetricCard";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RTooltip, CartesianGrid } from "recharts";
-import { Loader2, TrendingUp } from "lucide-react";
-import { stages, stageLabels } from "@shared/schema";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, LineChart, Line } from "recharts";
+import { BarChart3, MessageSquare, Users, Send, TrendingUp, Activity } from "lucide-react";
 
-function pct(v: number) {
-  return `${Math.round(v * 100)}%`;
+function MetricCard({ label, value, hint, icon: Icon, trend }: {
+  label: string; value: any; hint?: string; icon?: any; trend?: string;
+}) {
+  return (
+    <Card className="p-4 rounded-xl">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground/50" />}
+      </div>
+      <div className="text-2xl font-bold">{value ?? "—"}</div>
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+      {trend && <Badge variant="secondary" className="text-[10px] mt-1">{trend}</Badge>}
+    </Card>
+  );
+}
+
+function SkelCard() {
+  return (
+    <Card className="p-4 rounded-xl space-y-2">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-6 w-16 mt-1" />
+      <Skeleton className="h-3 w-28 mt-1" />
+    </Card>
+  );
 }
 
 export default function AnalyticsPage() {
-  const [days, setDays] = React.useState(30);
-  const q = useAnalyticsSummary(days);
+  const [range, setRange] = React.useState<"7" | "30" | "90">("30");
 
-  const byStage = q.data?.byStage || ({} as any);
-  const chartData = stages.map((s) => ({ stage: s, value: byStage?.[s] ?? 0 }));
+  const summaryQ = useAnalyticsSummary();
+  const msgQ = useMessageAnalytics();
+  const campQ = useCampaignsAnalytics();
+
+  const isLoading = summaryQ.isLoading;
+  const s = summaryQ.data;
+  const m = msgQ.data;
+  const camp = campQ.data;
+
+  // Build chart data from contactsByStage
+  const stageChartData = React.useMemo(() => {
+    if (!s?.contactsByStage) return [];
+    return (s.contactsByStage as any[]).map((row: any) => ({
+      name: row.stage ?? row.name ?? "?",
+      value: Number(row.count ?? row.value ?? 0),
+    }));
+  }, [s?.contactsByStage]);
+
+  // Build daily messages chart
+  const dailyChartData = React.useMemo(() => {
+    if (!m?.daily) return [];
+    return (m.daily as any[]).slice(-14).map((row: any) => ({
+      date: new Date(row.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      count: Number(row.count ?? 0),
+    }));
+  }, [m?.daily]);
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-analytics">
-      <div className="flex items-end justify-between gap-4">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6" data-testid="page-analytics">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl">Analytics</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Last 30 days by default. Metric cards + charts. Polished skeleton loading.
-          </p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-primary" /> Analytics
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Real-time insights from your WhatsApp campaigns and contacts.</p>
         </div>
-
         <div className="flex items-center gap-2">
-          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-            <SelectTrigger className="w-[170px] rounded-xl focus-ring" data-testid="analytics-days">
-              <SelectValue />
-            </SelectTrigger>
+          <Select value={range} onValueChange={(v) => setRange(v as any)}>
+            <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
               <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="180">Last 180 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="rounded-xl" onClick={() => q.refetch()} data-testid="analytics-refresh">
+          <Button variant="outline" size="sm" onClick={() => { summaryQ.refetch(); msgQ.refetch(); campQ.refetch(); }}>
             Refresh
           </Button>
         </div>
       </div>
 
-      {q.isLoading ? (
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="analytics-skeleton">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="rounded-2xl border-card-border bg-card/70 p-5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-7 w-20 mt-3" />
-              <Skeleton className="h-3 w-32 mt-2" />
-            </Card>
-          ))}
-          <Card className="sm:col-span-2 lg:col-span-4 rounded-2xl border-card-border bg-card/70 p-5">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-[260px] w-full mt-4" />
-          </Card>
-        </div>
-      ) : q.isError ? (
-        <Card className="surface-glass rounded-2xl mt-5 p-8 text-sm text-destructive" data-testid="analytics-error">
-          Failed to load analytics. ({String((q.error as any)?.message || q.error)})
+      {/* No data notice */}
+      {!isLoading && !s?.totalContacts && !s?.totalMessages && (
+        <Card className="p-4 rounded-xl border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-700 dark:text-amber-400">
+          No analytics data yet. Start by adding contacts and sending messages.
         </Card>
-      ) : !q.data ? (
-        <Card className="surface-glass rounded-2xl mt-5 p-8 text-sm text-muted-foreground" data-testid="analytics-empty">
-          No analytics data.
-        </Card>
-      ) : (
-        <div className="mt-5 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <MetricCard label="New leads" value={q.data.leadsNew} hint={`In last ${days} days`} tone="primary" data-testid="metric-leadsNew" />
-            <MetricCard label="Active conversations" value={q.data.conversationsActive} hint="With recent activity" tone="muted" data-testid="metric-conversationsActive" />
-            <MetricCard label="Messages sent" value={q.data.messagesSent} hint="Outbound volume" tone="primary" data-testid="metric-messagesSent" />
-            <MetricCard
-              label="Response rate"
-              value={pct(q.data.responseRate)}
-              hint="Replies / outbound"
-              tone="accent"
-              right={<TrendingUp className="h-5 w-5 text-primary" />}
-              data-testid="metric-responseRate"
-            />
-          </div>
+      )}
 
-          <Card className="surface-glass rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-card-border bg-card/60 backdrop-blur flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold">Leads by stage</div>
-                <div className="text-xs text-muted-foreground">Distribution across pipeline.</div>
-              </div>
-              {q.isFetching ? (
-                <div className="text-xs text-muted-foreground" data-testid="analytics-fetching">
-                  <Loader2 className="inline-block h-3.5 w-3.5 animate-spin mr-2" />
-                  Updating…
+      {/* Summary metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {isLoading ? Array.from({ length: 6 }).map((_, i) => <SkelCard key={i} />) : (
+          <>
+            <MetricCard label="Total Contacts" value={s?.totalContacts?.toLocaleString() ?? "—"} icon={Users} hint="All stages" />
+            <MetricCard label="Messages Sent" value={s?.messagesSent?.toLocaleString() ?? "—"} icon={Send} hint="Outbound" />
+            <MetricCard label="Messages Recv" value={s?.messagesReceived?.toLocaleString() ?? "—"} icon={MessageSquare} hint="Inbound" />
+            <MetricCard label="Active Campaigns" value={s?.activeCampaigns ?? "—"} icon={Activity} hint="Running now" />
+            <MetricCard label="Total Messages" value={s?.totalMessages?.toLocaleString() ?? "—"} icon={TrendingUp} hint="All time" />
+            <MetricCard label="Last 30d" value={s?.messagesLast30Days?.toLocaleString() ?? "—"} icon={BarChart3} hint="Messages" />
+          </>
+        )}
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Contacts by stage */}
+        <Card className="p-5 rounded-2xl">
+          <h3 className="font-semibold text-sm mb-4">Contacts by Stage</h3>
+          {isLoading ? <Skeleton className="h-48 w-full" /> : stageChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={stageChartData} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} width={36} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No stage data yet</div>
+          )}
+        </Card>
+
+        {/* Daily messages */}
+        <Card className="p-5 rounded-2xl">
+          <h3 className="font-semibold text-sm mb-4">Daily Messages (last 14 days)</h3>
+          {msgQ.isLoading ? <Skeleton className="h-48 w-full" /> : dailyChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={dailyChartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 11 }} width={36} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No daily data yet</div>
+          )}
+        </Card>
+      </div>
+
+      {/* Message stats */}
+      {m && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-5 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-3">By Direction</h3>
+            <div className="space-y-2">
+              {(m.byDirection || []).map((row: any) => (
+                <div key={row.direction} className="flex items-center justify-between text-sm">
+                  <span className="capitalize text-muted-foreground">{row.direction}</span>
+                  <span className="font-semibold">{Number(row.count).toLocaleString()}</span>
                 </div>
-              ) : null}
-            </div>
-            <div className="p-4">
-              <div className="h-[320px]" data-testid="analytics-chart">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ left: 6, right: 12, top: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="4 6" opacity={0.3} />
-                    <XAxis dataKey="stage" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                    <RTooltip
-                      contentStyle={{
-                        borderRadius: 14,
-                        border: "1px solid rgba(0,0,0,0.06)",
-                        boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
-                      }}
-                    />
-                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[10, 10, 10, 10]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              ))}
             </div>
           </Card>
+          <Card className="p-5 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-3">By Status</h3>
+            <div className="space-y-2">
+              {(m.byStatus || []).map((row: any) => (
+                <div key={row.status} className="flex items-center justify-between text-sm">
+                  <span className="capitalize text-muted-foreground">{row.status}</span>
+                  <span className="font-semibold">{Number(row.count).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card className="p-5 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-3">Response Rate</h3>
+            <div className="text-3xl font-bold">
+              {m.responseRate != null ? `${(m.responseRate * 100).toFixed(1)}%` : "—"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Inbound replies ÷ outbound sent</p>
+          </Card>
         </div>
+      )}
+
+      {/* Campaign analytics */}
+      {camp && (
+        <Card className="p-5 rounded-2xl">
+          <h3 className="font-semibold text-sm mb-4">Campaign Performance</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: "Total Campaigns", value: camp.summary?.total_campaigns },
+              { label: "Total Targeted", value: camp.summary?.total_targeted },
+              { label: "Messages Sent", value: camp.summary?.total_sent },
+              { label: "Delivered", value: camp.summary?.total_delivered },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <div className="text-xl font-bold">{s.value ? Number(s.value).toLocaleString() : "—"}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );

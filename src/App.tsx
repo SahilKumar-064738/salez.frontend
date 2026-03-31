@@ -27,14 +27,13 @@ import { AppSidebar } from "@/components/AppSidebar";
 import InboxPage from "@/pages/InboxPage";
 import ContactsPage from "@/pages/ContactsPage";
 import PipelinePage from "@/pages/PipelinePage";
-import AutomationPage from "@/pages/AutomationPage";
+import AutomationPage from "@/pages/AutomationPage";  // demo-only
 import BroadcastPage from "@/pages/BroadcastPage";
 import TemplatesPage from "@/pages/TemplatesPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
-import BillingPage from "@/pages/BillingPage";
 import WhatsAppSetupPage from "@/pages/WhatsAppSetupPage";
-
-// ─── Layouts ──────────────────────────────────────────────────────────────────
+import RecordsPage from "@/pages/RecordsPage";
+// BillingPage removed — /billing is not in API contract; sidebar upgrade button opens modal
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -68,14 +67,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── DashboardRedirect: /dashboard → /inbox (if authed) or /auth/login ───────
 function DashboardRedirect() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
   React.useEffect(() => {
-    if (!isLoading) {
-      setLocation(isAuthenticated ? "/inbox" : "/auth/login", { replace: true });
-    }
+    if (!isLoading) setLocation(isAuthenticated ? "/inbox" : "/auth/login", { replace: true });
   }, [isLoading, isAuthenticated, setLocation]);
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -84,41 +80,26 @@ function DashboardRedirect() {
   );
 }
 
-// ─── AuthGate: redirect already-logged-in users away from auth pages ─────────
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
-
   React.useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      setLocation("/inbox", { replace: true });
-    }
+    if (!isLoading && isAuthenticated) setLocation("/inbox", { replace: true });
   }, [isLoading, isAuthenticated, setLocation]);
-
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
-
-  if (isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
   return <>{children}</>;
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
 function Router() {
   return (
     <Switch>
-      {/* Public routes */}
+      {/* ── Public ──────────────────────────────────────────────── */}
       <Route path="/"><PublicLayout><Landing /></PublicLayout></Route>
       <Route path="/dashboard"><DashboardRedirect /></Route>
       <Route path="/pricing"><PublicLayout><Pricing /></PublicLayout></Route>
@@ -127,7 +108,6 @@ function Router() {
       <Route path="/terms"><PublicLayout><Terms /></PublicLayout></Route>
       <Route path="/meta-verification"><PublicLayout><MetaVerification /></PublicLayout></Route>
 
-      {/* Industry template pages — public */}
       <Route path="/templates/clinics"><PublicLayout><TemplateLanding industry="clinics" /></PublicLayout></Route>
       <Route path="/templates/coaching"><PublicLayout><TemplateLanding industry="coaching" /></PublicLayout></Route>
       <Route path="/templates/salons"><PublicLayout><TemplateLanding industry="salons" /></PublicLayout></Route>
@@ -137,15 +117,11 @@ function Router() {
       <Route path="/templates/realestate"><PublicLayout><TemplateLanding industry="realestate" /></PublicLayout></Route>
       <Route path="/templates/ca"><PublicLayout><TemplateLanding industry="ca" /></PublicLayout></Route>
 
-      {/* Auth — AuthGate prevents logged-in users from seeing these */}
-      <Route path="/auth/login">
-        <PublicLayout><AuthGate><Login /></AuthGate></PublicLayout>
-      </Route>
-      <Route path="/auth/signup">
-        <PublicLayout><AuthGate><Signup /></AuthGate></PublicLayout>
-      </Route>
+      {/* ── Auth ────────────────────────────────────────────────── */}
+      <Route path="/auth/login"><AuthGate><PublicLayout><Login /></PublicLayout></AuthGate></Route>
+      <Route path="/auth/signup"><AuthGate><PublicLayout><Signup /></PublicLayout></AuthGate></Route>
 
-      {/* Protected dashboard routes */}
+      {/* ── Protected app routes ─────────────────────────────────── */}
       <Route path="/inbox"><ProtectedRoute><AuthenticatedLayout><InboxPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/contacts"><ProtectedRoute><AuthenticatedLayout><ContactsPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/pipeline"><ProtectedRoute><AuthenticatedLayout><PipelinePage /></AuthenticatedLayout></ProtectedRoute></Route>
@@ -154,7 +130,9 @@ function Router() {
       <Route path="/templates"><ProtectedRoute><AuthenticatedLayout><TemplatesPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/analytics"><ProtectedRoute><AuthenticatedLayout><AnalyticsPage /></AuthenticatedLayout></ProtectedRoute></Route>
       <Route path="/whatsapp-setup"><ProtectedRoute><AuthenticatedLayout><WhatsAppSetupPage /></AuthenticatedLayout></ProtectedRoute></Route>
-      <Route path="/billing"><ProtectedRoute><AuthenticatedLayout><BillingPage /></AuthenticatedLayout></ProtectedRoute></Route>
+      <Route path="/records"><ProtectedRoute><AuthenticatedLayout><RecordsPage /></AuthenticatedLayout></ProtectedRoute></Route>
+
+      {/* ── Removed: /billing (not in API contract) — upgrade via sidebar modal ── */}
 
       <Route component={NotFound} />
     </Switch>
@@ -166,8 +144,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <Toaster />
           <Router />
+          <Toaster />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

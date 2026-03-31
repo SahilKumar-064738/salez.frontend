@@ -24,7 +24,7 @@ export const api = {
   contacts: {
     list: {
       method: 'GET' as const,
-      path: '/api/contacts',
+      path: '/api/v1/contacts',
       input: z.object({
         search: z.string().optional(),
         stage: z.string().optional(),
@@ -36,7 +36,7 @@ export const api = {
     },
     get: {
       method: 'GET' as const,
-      path: '/api/contacts/:id',
+      path: '/api/v1/contacts/:id',
       responses: {
         200: z.custom<typeof contacts.$inferSelect>(),
         404: errorSchemas.notFound,
@@ -44,7 +44,7 @@ export const api = {
     },
     create: {
       method: 'POST' as const,
-      path: '/api/contacts',
+      path: '/api/v1/contacts',
       input: insertContactSchema,
       responses: {
         201: z.custom<typeof contacts.$inferSelect>(),
@@ -53,7 +53,7 @@ export const api = {
     },
     update: {
       method: 'PATCH' as const,
-      path: '/api/contacts/:id',
+      path: '/api/v1/contacts/:id',
       input: insertContactSchema.partial(),
       responses: {
         200: z.custom<typeof contacts.$inferSelect>(),
@@ -62,7 +62,7 @@ export const api = {
     },
     delete: {
       method: 'DELETE' as const,
-      path: '/api/contacts/:id',
+      path: '/api/v1/contacts/:id',
       responses: {
         204: z.void(),
         404: errorSchemas.notFound,
@@ -72,14 +72,14 @@ export const api = {
   messages: {
     list: {
       method: 'GET' as const,
-      path: '/api/contacts/:contactId/messages',
+      path: '/api/v1/contacts/:contactId/messages',
       responses: {
         200: z.array(z.custom<typeof messages.$inferSelect>()),
       },
     },
     create: {
       method: 'POST' as const,
-      path: '/api/contacts/:contactId/messages',
+      path: '/api/v1/contacts/:contactId/messages',
       input: insertMessageSchema.omit({ contactId: true }),
       responses: {
         201: z.custom<typeof messages.$inferSelect>(),
@@ -90,14 +90,14 @@ export const api = {
   automation: {
     list: {
       method: 'GET' as const,
-      path: '/api/automation-rules',
+      path: '/api/v1/automation-rules',
       responses: {
         200: z.array(z.custom<typeof automationRules.$inferSelect>()),
       },
     },
     create: {
       method: 'POST' as const,
-      path: '/api/automation-rules',
+      path: '/api/v1/automation-rules',
       input: insertRuleSchema,
       responses: {
         201: z.custom<typeof automationRules.$inferSelect>(),
@@ -106,7 +106,7 @@ export const api = {
     },
     update: {
       method: 'PATCH' as const,
-      path: '/api/automation-rules/:id',
+      path: '/api/v1/automation-rules/:id',
       input: insertRuleSchema.partial(),
       responses: {
         200: z.custom<typeof automationRules.$inferSelect>(),
@@ -115,7 +115,7 @@ export const api = {
     },
     delete: {
       method: 'DELETE' as const,
-      path: '/api/automation-rules/:id',
+      path: '/api/v1/automation-rules/:id',
       responses: {
         204: z.void(),
         404: errorSchemas.notFound,

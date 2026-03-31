@@ -4,7 +4,7 @@
  * Backend contract:
  *   GET  /api/v1/contacts?stage=<stage>  — contacts filtered by stage
  *   PUT  /api/v1/contacts/:id            — update contact stage
- *   GET  /api/v1/contacts/stats/pipeline — pipeline counts per stage
+ *   GET  /api/v1/contacts/pipeline-stats — pipeline counts per stage
  *
  * The old /api/pipeline and /api/pipeline/move endpoints do not exist.
  */
@@ -32,7 +32,7 @@ export function usePipelineContacts() {
   return useQuery({
     queryKey: ["pipeline"],
     queryFn: async (): Promise<PipelineResponse> => {
-      const result = await contactsService.list({ limit: 500 });
+      const result = await contactsService.list({ limit: 100 });
       const grouped: PipelineResponse = {};
 
       for (const stage of STAGES) {

@@ -17,7 +17,7 @@
  *   Response unwrapping: { success, data: {...} }
  */
 
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/lib/apiClient";
 
 export interface Campaign {
   id: number;
@@ -130,7 +130,7 @@ export const campaignsService = {
       scheduledAt: string | null;
     }>
   ): Promise<Campaign> {
-    const raw = await apiPut<any>(`/campaigns/${id}`, data);
+    const raw = await apiPatch<any>(`/campaigns/${id}`, data);
     return normalize(raw?.data ?? raw);
   },
 

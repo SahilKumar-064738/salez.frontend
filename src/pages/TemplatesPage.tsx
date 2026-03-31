@@ -1,16 +1,16 @@
 import * as React from "react";
-import type { Template } from "@shared/schema";
+import type { Template } from "@/services/templatesService";
 import { useTemplates, useCreateTemplate, useUpdateTemplate } from "@/hooks/use-templates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { StatusBadge } from "@/components/StatusBadge";
-import { Image, Loader2, NotebookPen, Plus, Search, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Plus, Search, Sparkles, Copy, Edit2, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 function useDebounced<T>(value: T, delay = 250) {
   const [v, setV] = React.useState(value);
@@ -23,150 +23,152 @@ function useDebounced<T>(value: T, delay = 250) {
 
 const statuses = ["Pending", "Approved", "Rejected"] as const;
 
-function TemplateEditor({
-  initial,
-  saving,
-  locked,
-  onSave,
-}: {
-  initial?: Partial<Template>;
-  saving?: boolean;
-  locked?: boolean;
+const DEMO_TEMPLATES = [
+  { id: "demo-1", name: "Welcome New Lead", status: "Approved", category: "utility", content: "Hi {{name}}! 👋 Welcome to {{business}}. We're thrilled to connect with you on WhatsApp. How can we help you today?", variables: ["name", "business"] },
+  { id: "demo-2", name: "Appointment Reminder", status: "Approved", category: "utility", content: "Hi {{name}}, this is a reminder that your appointment is scheduled for {{date}} at {{time}}. Reply YES to confirm or NO to reschedule.", variables: ["name", "date", "time"] },
+  { id: "demo-3", name: "Follow-up Nudge", status: "Approved", category: "marketing", content: "Hey {{name}}! Just checking in — did you get a chance to look at our proposal? We'd love to answer any questions. 😊", variables: ["name"] },
+  { id: "demo-4", name: "Flash Sale Alert", status: "Pending", category: "marketing", content: "🔥 {{name}}, our biggest sale of the year starts NOW! Get {{discount}}% off on all plans. Offer ends {{date}}. Tap to grab yours!", variables: ["name", "discount", "date"] },
+  { id: "demo-5", name: "Order Confirmation", status: "Approved", category: "utility", content: "Hi {{name}} ✅ Your order #{{order_id}} has been confirmed. Expected delivery: {{delivery_date}}. Track: {{tracking_link}}", variables: ["name", "order_id", "delivery_date", "tracking_link"] },
+  { id: "demo-6", name: "Win-Back Campaign", status: "Rejected", category: "marketing", content: "We miss you, {{name}}! 💙 It's been a while. Come back and get {{offer}} just for you. Valid till {{expiry}}.", variables: ["name", "offer", "expiry"] },
+];
+
+function StatusBadge({ status }: { status: string }) {
+  const s = status?.toLowerCase();
+  if (s === "approved") return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 text-[11px] font-semibold">
+      <CheckCircle2 className="h-3 w-3" /> Approved
+    </span>
+  );
+  if (s === "rejected") return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2.5 py-0.5 text-[11px] font-semibold">
+      <XCircle className="h-3 w-3" /> Rejected
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 text-[11px] font-semibold">
+      <Clock className="h-3 w-3" /> Pending
+    </span>
+  );
+}
+
+function CategoryBadge({ category }: { category: string }) {
+  const colors: Record<string, string> = {
+    utility: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+    marketing: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+    authentication: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
+  };
+  return (
+    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize", colors[category] || colors.utility)}>
+      {category}
+    </span>
+  );
+}
+
+function TemplateEditor({ initial, saving, locked, onSave }: {
+  initial?: Partial<Template>; saving?: boolean; locked?: boolean;
   onSave: (data: Partial<Template>) => void;
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [content, setContent] = React.useState(initial?.content ?? "");
-  const [status, setStatus] = React.useState((initial?.status as any) ?? "Pending");
-  const [rejectionReason, setRejectionReason] = React.useState(initial?.rejectionReason ?? "");
-  const [imagePreview, setImagePreview] = React.useState<string>((initial as any)?.imageUrl ?? "");
+  const [category, setCategory] = React.useState((initial as any)?.category ?? "utility");
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
+  const variables = React.useMemo(() => {
+    const matches = content.match(/\{\{([^}]+)\}\}/g) || [];
+    return [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, "")))];
+  }, [content]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" data-testid="template-editor">
-      <div className="space-y-3">
+    <div className="space-y-4 py-2">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Template name</label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="Welcome + qualification"
-            disabled={locked}
-            data-testid="template-name"
-          />
+          <label className="text-xs font-semibold text-muted-foreground">Template Name *</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Welcome Message" className="mt-1" disabled={locked} />
         </div>
-
         <div>
-          <label className="text-xs font-semibold text-muted-foreground">Content</label>
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="mt-1 rounded-xl min-h-[200px] focus-ring"
-            placeholder="Hey {{name}} — quick question…"
-            disabled={locked}
-            data-testid="template-content"
-          />
-          <div className="mt-1 text-[11px] text-muted-foreground">
-            Keep it short. Use {"{{name}}"}, {"{{date}}"}, {"{{time}}"} for personalisation.
-          </div>
-        </div>
-
-        {/* Image upload (Change 8) */}
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Header image (optional)</label>
-          {imagePreview ? (
-            <div className="mt-1 relative rounded-xl overflow-hidden border h-36">
-              <img src={imagePreview} alt="Header preview" className="w-full h-full object-cover" />
-              {!locked && (
-                <button
-                  onClick={() => setImagePreview("")}
-                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          ) : (
-            !locked && (
-              <label className="mt-1 flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-                <Image className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Add header image</p>
-                  <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Shown above message text.</p>
-                </div>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={locked} />
-              </label>
-            )
-          )}
+          <label className="text-xs font-semibold text-muted-foreground">Category</label>
+          <Select value={category} onValueChange={setCategory} disabled={locked}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="utility">Utility</SelectItem>
+              <SelectItem value="marketing">Marketing</SelectItem>
+              <SelectItem value="authentication">Authentication</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-
-      <div className="space-y-3">
-        <div className="rounded-2xl border border-card-border bg-gradient-to-br from-primary/10 to-accent/10 p-4">
-          <div className="text-xs font-semibold text-muted-foreground">Live preview</div>
-          <div className="mt-2 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
-            {imagePreview && (
-              <img src={imagePreview} alt="Header" className="rounded-lg mb-3 w-full object-cover max-h-28" />
-            )}
-            <div className="text-sm font-semibold">{name || "Untitled template"}</div>
-            <div className="mt-2 text-sm whitespace-pre-wrap leading-relaxed text-muted-foreground">
-              {content || "Start typing to preview your message…"}
-            </div>
+      <div>
+        <label className="text-xs font-semibold text-muted-foreground">Content *</label>
+        <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+          placeholder="Hi {{name}}, your appointment is on {{date}} at {{time}}."
+          className="mt-1 min-h-[140px] font-mono text-sm" disabled={locked} />
+        <p className="text-[11px] text-muted-foreground mt-1">Use {"{{variable}}"} for dynamic fields.</p>
+      </div>
+      {variables.length > 0 && (
+        <div className="rounded-xl bg-muted/50 p-3">
+          <p className="text-xs font-semibold mb-2">Detected variables:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {variables.map(v => <code key={v} className="text-[11px] bg-background border rounded px-2 py-0.5">{`{{${v}}}`}</code>)}
           </div>
         </div>
+      )}
+      {locked && (
+        <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl p-3">
+          ✅ This template is <strong>Approved</strong> — content is locked. Duplicate it to create an editable copy.
+        </p>
+      )}
+      <Button onClick={() => onSave({ name, content, variables, category } as any)}
+        disabled={saving || !name.trim() || !content.trim() || locked} className="w-full rounded-xl">
+        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+        {initial ? "Save Changes" : "Create Template"}
+      </Button>
+    </div>
+  );
+}
 
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-card-border bg-background/40 p-4">
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground">Status</label>
-            <Select value={status} onValueChange={setStatus as any}>
-              <SelectTrigger className="mt-1 rounded-xl focus-ring" data-testid="template-status">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+function TemplateCard({ t, isDemo, onEdit, onCopy }: {
+  t: any; isDemo: boolean;
+  onEdit: (t: any) => void;
+  onCopy: (t: any) => void;
+}) {
+  return (
+    <div className="p-5 rounded-2xl border border-border bg-card shadow-sm hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3.5 group">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm truncate leading-tight">{t.name}</p>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <StatusBadge status={t.status} />
+            <CategoryBadge category={t.category ?? "utility"} />
           </div>
+        </div>
+        {isDemo && (
+          <span className="text-[10px] bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-full px-2 py-0.5 font-semibold shrink-0">Demo</span>
+        )}
+      </div>
 
-          {status === "Rejected" ? (
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">Rejection reason</label>
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                className="mt-1 rounded-xl min-h-[90px] focus-ring"
-                placeholder="Missing opt-out line…"
-                data-testid="template-rejectionReason"
-              />
-            </div>
-          ) : null}
+      <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed bg-muted/30 rounded-xl p-3 border border-border/40">
+        {t.content}
+      </p>
 
-          <Button
-            onClick={() => onSave({ name, content, status, rejectionReason: rejectionReason || null, imageUrl: imagePreview || null } as any)}
-            disabled={saving || locked || !name.trim() || !content.trim()}
-            className="rounded-xl shadow-sm hover:shadow-md transition-all"
-            data-testid="template-save"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <NotebookPen className="h-4 w-4 mr-2" />}
-            Save template
+      {(t.variables || []).length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Variables:</span>
+          {(t.variables || []).slice(0, 4).map((v: string) => (
+            <code key={v} className="text-[10px] bg-primary/10 text-primary rounded-lg px-2 py-0.5 font-mono font-semibold">{`{{${v}}}`}</code>
+          ))}
+          {(t.variables || []).length > 4 && <span className="text-[10px] text-muted-foreground">+{t.variables.length - 4} more</span>}
+        </div>
+      )}
+
+      {!isDemo && (
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50 mt-auto">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs flex-1 rounded-xl hover:bg-muted/80 transition-colors" onClick={() => onEdit(t)}>
+            <Edit2 className="h-3.5 w-3.5" /> Edit
           </Button>
-
-          {locked ? (
-            <div className="text-[11px] text-muted-foreground">
-              Approved templates are locked. Duplicate it to make changes.
-            </div>
-          ) : null}
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs flex-1 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors" onClick={() => onCopy(t)}>
+            <Copy className="h-3.5 w-3.5" /> Duplicate
+          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -174,214 +176,105 @@ function TemplateEditor({
 export default function TemplatesPage() {
   const { toast } = useToast();
   const [search, setSearch] = React.useState("");
-  const debounced = useDebounced(search, 250);
+  const debounced = useDebounced(search);
   const [status, setStatus] = React.useState<string>("all");
+  const [creating, setCreating] = React.useState(false);
+  const [editing, setEditing] = React.useState<Template | null>(null);
 
   const q = useTemplates({ search: debounced || undefined, status: status === "all" ? undefined : status });
   const createM = useCreateTemplate();
   const updateM = useUpdateTemplate();
 
   const templates = (q.data || []) as unknown as Template[];
+  const isDemo = !q.isLoading && templates.length === 0;
+  const displayTemplates = isDemo ? DEMO_TEMPLATES : templates;
 
-  const [creating, setCreating] = React.useState(false);
-  const [editing, setEditing] = React.useState<Template | null>(null);
+  const handleCopy = (t: any) => {
+    createM.mutate({ name: `${t.name} (copy)`, content: t.content, variables: t.variables, status: "Pending" } as any, {
+      onSuccess: () => toast({ title: "Duplicated" }),
+      onError: (e) => toast({ title: "Failed", description: String((e as any)?.message || e), variant: "destructive" }),
+    });
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-templates">
-      <div className="flex items-end justify-between gap-4">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-5" data-testid="page-templates">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl">Templates</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Status-aware editor with live preview. Approved templates are locked.
-          </p>
+          <h1 className="text-2xl font-bold">Templates</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">WhatsApp message templates. Approved templates are locked for editing.</p>
         </div>
-
-        <Drawer open={creating} onOpenChange={setCreating}>
-          <DrawerTrigger asChild>
-            <Button
-              className="rounded-xl bg-gradient-to-br from-primary to-primary/85 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
-              data-testid="templates-create-open"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New template
+        <Dialog open={creating} onOpenChange={setCreating}>
+          <DialogTrigger asChild>
+            <Button className="gap-2 rounded-xl bg-green-600 hover:bg-green-700 shadow-md hover:scale-105 transition-all" data-testid="templates-create-open">
+              <Plus className="h-4 w-4" /> New Template
             </Button>
-          </DrawerTrigger>
-          <DrawerContent className="rounded-t-3xl" data-testid="templates-create-drawer">
-            <div className="mx-auto w-full max-w-5xl p-4">
-              <DrawerHeader className="px-0">
-                <DrawerTitle>Create template</DrawerTitle>
-              </DrawerHeader>
-              <TemplateEditor
-                saving={createM.isPending}
-                onSave={(data) => {
-                  createM.mutate(data as any, {
-                    onSuccess: () => {
-                      toast({ title: "Created", description: "Template added." });
-                      setCreating(false);
-                    },
-                    onError: (e) =>
-                      toast({ title: "Create failed", description: String(e.message || e), variant: "destructive" }),
-                  });
-                }}
-              />
-              <div className="mt-4">
-                <DrawerClose asChild>
-                  <Button variant="outline" className="w-full rounded-xl" data-testid="templates-create-close">
-                    Close
-                  </Button>
-                </DrawerClose>
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader><DialogTitle>Create Template</DialogTitle></DialogHeader>
+            <TemplateEditor saving={createM.isPending}
+              onSave={(data) => createM.mutate(data as any, {
+                onSuccess: () => { toast({ title: "Template created" }); setCreating(false); },
+                onError: (e) => toast({ title: "Failed", description: String((e as any)?.message || e), variant: "destructive" }),
+              })} />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Card className="surface-glass rounded-2xl mt-5 overflow-hidden">
-        <div className="p-4 border-b border-card-border bg-card/60 backdrop-blur">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-2 items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 rounded-xl focus-ring"
-                placeholder="Search templates…"
-                data-testid="templates-search"
-              />
-            </div>
-
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="rounded-xl focus-ring" data-testid="templates-filter-status">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="rounded-xl justify-self-start md:justify-self-end" onClick={() => q.refetch()} data-testid="templates-refresh">
-              Refresh
-            </Button>
+      {isDemo && (
+        <div className="rounded-2xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 px-5 py-4 flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-violet-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">✨ Demo Templates — Pre-filled examples</p>
+            <p className="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
+              No templates yet. Showing 6 ready-to-use examples. Click "New Template" to create your first real template.
+            </p>
           </div>
         </div>
+      )}
 
-        <div className="p-2 sm:p-3">
-          {q.isLoading ? (
-            <div className="p-6 text-sm text-muted-foreground" data-testid="templates-loading">
-              <Loader2 className="inline-block h-4 w-4 animate-spin mr-2" />
-              Loading templates…
-            </div>
-          ) : q.isError ? (
-            <div className="p-6 text-sm text-destructive" data-testid="templates-error">
-              Failed to load. ({String((q.error as any)?.message || q.error)})
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground" data-testid="templates-empty">
-              No templates yet. Create one for consistent outreach.
-            </div>
-          ) : (
-            <div className="overflow-auto">
-              <Table data-testid="templates-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[220px]">Name</TableHead>
-                    <TableHead className="min-w-[140px]">Status</TableHead>
-                    <TableHead className="min-w-[360px]">Content</TableHead>
-                    <TableHead className="text-right min-w-[240px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map((t: any) => (
-                    <TableRow key={t.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-semibold">{t.name}</TableCell>
-                      <TableCell>
-                        <StatusBadge value={t.status} />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div className="line-clamp-2">{t.content}</div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            className="rounded-xl"
-                            onClick={() => setEditing(t)}
-                            data-testid={`templates-edit-open-${t.id}`}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="rounded-xl"
-                            onClick={() => {
-                              createM.mutate(
-                                { name: `${t.name} (copy)`, content: t.content, status: "Pending" } as any,
-                                {
-                                  onSuccess: () => toast({ title: "Duplicated", description: "Template copied as Pending." }),
-                                  onError: (e) =>
-                                    toast({ title: "Duplicate failed", description: String(e.message || e), variant: "destructive" }),
-                                },
-                              );
-                            }}
-                            data-testid={`templates-duplicate-${t.id}`}
-                          >
-                            Duplicate
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              <Drawer open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-                <DrawerTrigger asChild>
-                  <span className="hidden" />
-                </DrawerTrigger>
-                <DrawerContent className="rounded-t-3xl" data-testid="templates-edit-drawer">
-                  <div className="mx-auto w-full max-w-5xl p-4">
-                    <DrawerHeader className="px-0">
-                      <DrawerTitle>Edit template</DrawerTitle>
-                    </DrawerHeader>
-                    {editing ? (
-                      <TemplateEditor
-                        initial={editing}
-                        locked={editing.status === "Approved"}
-                        saving={updateM.isPending}
-                        onSave={(data) => {
-                          updateM.mutate(
-                            { id: (editing as any).id, updates: data as any },
-                            {
-                              onSuccess: () => {
-                                toast({ title: "Saved", description: "Template updated." });
-                                setEditing(null);
-                              },
-                              onError: (e) =>
-                                toast({ title: "Save failed", description: String(e.message || e), variant: "destructive" }),
-                            },
-                          );
-                        }}
-                      />
-                    ) : null}
-                    <div className="mt-4">
-                      <DrawerClose asChild>
-                        <Button variant="outline" className="w-full rounded-xl" data-testid="templates-edit-close">
-                          Close
-                        </Button>
-                      </DrawerClose>
-                    </div>
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </div>
-          )}
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[160px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" className="pl-8 h-9 text-sm rounded-xl" />
         </div>
-      </Card>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[150px] h-9 text-sm rounded-xl"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" onClick={() => q.refetch()} className="rounded-xl h-9">Refresh</Button>
+        {isDemo && <Badge variant="secondary" className="text-[10px]">Demo Data</Badge>}
+      </div>
+
+      {/* Card Grid */}
+      {q.isLoading ? (
+        <div className="p-8 text-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto" /></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(displayTemplates as any[]).map((t: any) => (
+            <TemplateCard key={t.id} t={t} isDemo={isDemo} onEdit={setEditing} onCopy={handleCopy} />
+          ))}
+        </div>
+      )}
+
+      {/* Edit dialog */}
+      {editing && (
+        <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader><DialogTitle>Edit Template</DialogTitle></DialogHeader>
+            <TemplateEditor initial={editing} locked={(editing as any).status === "Approved"}
+              saving={updateM.isPending}
+              onSave={(data) => updateM.mutate({ id: (editing as any).id, updates: data as any }, {
+                onSuccess: () => { toast({ title: "Saved" }); setEditing(null); },
+                onError: (e) => toast({ title: "Failed", description: String((e as any)?.message || e), variant: "destructive" }),
+              })} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -1,24 +1,11 @@
 /**
- * src/services/contactsService.ts
- *
- * Backend contract (all under /api/v1 — handled by apiClient):
- *   GET    /contacts                  list + filter (cursor pagination)
- *   GET    /contacts/stats/pipeline   pipeline counts per stage
- *   GET    /contacts/:id              single contact + tags
- *   POST   /contacts                  create
- *   PUT    /contacts/:id              update (no phone field)
- *   DELETE /contacts/:id              soft delete
- *   POST   /contacts/:id/tags         add tag
- *   DELETE /contacts/:id/tags/:tag    remove tag
- *
- * Fixes applied:
- *   - Response unwrapping: backend returns { success, data: [...] }
- *   - stats endpoint: /contacts/stats/pipeline (not /contacts/stats)
- *   - update payload: phone excluded (Issue per Section 4)
- *   - Pipeline stats response shape: { new, contacted, qualified, converted, lost }
+ * src/services/contactsService.ts - REFACTORED
+ * Backend: GET /contacts/pipeline-stats (not /stats/pipeline)
+ * PATCH /contacts/:id (not PUT)
+ * limit ≤ 100 enforced
+ * pagination key is "pagination" not "meta"
  */
-
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/apiClient";
 
 export interface Contact {
   id: number;
@@ -71,36 +58,27 @@ function normalize(c: any): Contact {
 }
 
 export const contactsService = {
-  /**
-   * GET /contacts — cursor-paginated list
-   * Backend response: { success, data: [...], meta: { nextCursor, hasMore } }
-   */
   async list(filters?: ContactFilters): Promise<ContactListResult> {
     const params: Record<string, string> = {};
     if (filters?.search) params.search = filters.search;
     if (filters?.stage) params.stage = filters.stage;
     if (filters?.tag) params.tag = filters.tag;
     if (filters?.cursor) params.cursor = filters.cursor;
-    if (filters?.limit) params.limit = String(filters.limit);
+    params.limit = String(Math.min(filters?.limit ?? 50, 100));
 
     const raw = await apiGet<any>("/contacts", { params });
-
-    // Backend: { success: true, data: [...], meta: { nextCursor, hasMore } }
     const list = raw?.data ?? raw ?? [];
+    const pagination = raw?.pagination ?? raw?.meta ?? {};
     return {
       contacts: (Array.isArray(list) ? list : []).map(normalize),
-      nextCursor: raw?.meta?.nextCursor ?? null,
-      hasMore: raw?.meta?.hasMore ?? false,
+      nextCursor: pagination?.nextCursor ?? null,
+      hasMore: pagination?.hasMore ?? false,
     };
   },
 
-  /**
-   * GET /contacts/stats/pipeline
-   * Returns per-stage counts: { new, contacted, qualified, converted, lost }
-   */
   async pipelineStats(): Promise<PipelineStats> {
     try {
-      const raw = await apiGet<any>("/contacts/stats/pipeline");
+      const raw = await apiGet<any>("/contacts/pipeline-stats");
       const d = raw?.data ?? raw ?? {};
       return {
         new: Number(d.new ?? 0),
@@ -130,23 +108,13 @@ export const contactsService = {
     return normalize(raw?.data ?? raw);
   },
 
-  /**
-   * PUT /contacts/:id
-   * FIX: phone is NOT sent — backend does not allow phone updates (identity field).
-   */
   async update(
     id: number,
-    data: Partial<{
-      name: string;
-      email: string;
-      stage: string;
-      notes: string;
-      // phone intentionally excluded
-    }>
+    data: Partial<{ name: string; email: string; stage: string; notes: string }>
   ): Promise<Contact> {
-    const { ...safeData } = data as any;
-    delete safeData.phone; // Defensive: strip phone even if caller passes it
-    const raw = await apiPut<any>(`/contacts/${id}`, safeData);
+    const safeData = { ...data } as any;
+    delete safeData.phone;
+    const raw = await apiPatch<any>(`/contacts/${id}`, safeData);
     return normalize(raw?.data ?? raw);
   },
 
@@ -161,5 +129,20 @@ export const contactsService = {
 
   async removeTag(contactId: number, tag: string): Promise<void> {
     await apiDelete(`/contacts/${contactId}/tags/${encodeURIComponent(tag)}`);
+  },
+
+  async bulkCreate(contacts: { name: string; phone: string }[]): Promise<{ created: number; failed: number; errors: string[] }> {
+    let created = 0, failed = 0;
+    const errors: string[] = [];
+    for (const c of contacts) {
+      try {
+        await contactsService.create({ phone: c.phone, name: c.name });
+        created++;
+      } catch (e: any) {
+        failed++;
+        errors.push(`${c.name} (${c.phone}): ${e?.message ?? "Error"}`);
+      }
+    }
+    return { created, failed, errors };
   },
 };

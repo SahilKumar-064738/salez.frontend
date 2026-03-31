@@ -1,6 +1,6 @@
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, X, Plus, Trash2, ChevronDown, CheckCircle2, Copy } from "lucide-react";
+import { CalendarIcon, X, Plus, Trash2, ChevronDown, CheckCircle2, Copy, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -307,6 +307,16 @@ export default function WhatsAppSetupPage() {
     });
   };
 
+  const handleDownloadTxt = () => {
+    const blob = new Blob([jsonStr], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "business_profile.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const pct = Math.round(((step + 1) / STEPS.length) * 100);
 
   // ── Field wrapper ────────────────────────────────────────────────────────────
@@ -334,6 +344,10 @@ export default function WhatsAppSetupPage() {
               {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? "Copied!" : "Copy"}
             </Button>
+            <Button variant="outline" size="sm" className="rounded-xl gap-2" onClick={handleDownloadTxt}>
+              <Download className="h-3.5 w-3.5" />
+              Download .txt
+            </Button>
           </div>
           <pre className="rounded-2xl bg-[#0d1117] text-[#9eceff] text-[11.5px] leading-relaxed p-4 overflow-auto max-h-80 font-mono">{jsonStr}</pre>
         </div>
@@ -342,7 +356,7 @@ export default function WhatsAppSetupPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 py-6 rise-in" data-testid="page-whatsapp-setup">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-whatsapp-setup">
 
       {/* Header */}
       <div className="mb-6">
@@ -354,8 +368,10 @@ export default function WhatsAppSetupPage() {
         <p className="mt-1 text-sm text-muted-foreground">Works for any industry · Takes about 5 minutes · Your data personalises every automated message.</p>
       </div>
 
+      {/* 2-col layout: form left, preview right on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       {/* Card */}
-      <Card className="rounded-2xl border-card-border shadow-sm overflow-hidden">
+      <Card className="rounded-2xl border-card-border shadow-sm overflow-hidden lg:col-span-2">
 
         {/* Progress bar */}
         <div className="px-5 pt-5 pb-0 border-b border-card-border bg-card/60 backdrop-blur">
@@ -770,10 +786,16 @@ export default function WhatsAppSetupPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Generated JSON</p>
-                  <Button variant="outline" size="sm" className="rounded-xl gap-2" onClick={handleCopy}>
-                    {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? "Copied!" : "Copy JSON"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="rounded-xl gap-2" onClick={handleCopy}>
+                      {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                    <Button variant="outline" size="sm" className="rounded-xl gap-2" onClick={handleDownloadTxt}>
+                      <Download className="h-3.5 w-3.5" />
+                      Download .txt
+                    </Button>
+                  </div>
                 </div>
                 <pre className="rounded-2xl bg-[#0d1117] text-[#9eceff] text-[11px] leading-relaxed p-4 overflow-auto max-h-64 font-mono">{jsonStr}</pre>
               </div>
@@ -810,6 +832,7 @@ export default function WhatsAppSetupPage() {
           </div>
         </div>
       </Card>
+      </div>{/* end grid */}
     </div>
   );
 }

@@ -1,12 +1,15 @@
 import * as React from "react";
-import type { Campaign, Contact, Stage, Template } from "@shared/schema";
+import type { Stage } from "@shared/schema";
 import { stages, stageLabels } from "@shared/schema";
+import type { Contact } from "@/services/contactsService";
+import type { Campaign } from "@/services/campaignsService";
+import type { Template } from "@/services/templatesService";
 import { useCampaigns, useCreateCampaign, useUpdateCampaign } from "@/hooks/use-broadcast";
 import { useContacts } from "@/hooks/use-contacts";
 import { useTemplates } from "@/hooks/use-templates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -115,6 +118,10 @@ export default function BroadcastPage() {
   const canFinish = true;
 
   // CSV import handler
+  // FIX: Flexible CSV header mapping — only extract name + phone
+  const NAME_KEYS = ["name", "Name", "NAME", "full_name", "Full Name", "fullname"];
+  const PHONE_KEYS = ["phone", "Phone", "PHONE", "mobile", "Mobile", "MOBILE", "phone_number", "Phone Number"];
+
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -122,10 +129,20 @@ export default function BroadcastPage() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const rows = (results.data as any[]).filter(r => (r.name || r.Name) && (r.phone || r.Phone || r.mobile));
-        setCsvContacts(rows.map(r => ({ name: r.name || r.Name, phone: r.phone || r.Phone || r.mobile })));
+        const rows = results.data as any[];
+        // Only extract name + phone; ignore all other columns
+        const parsed = rows.map(row => ({
+          name: String(NAME_KEYS.reduce((acc, k) => acc || row[k] || "", "") || "").trim(),
+          phone: String(PHONE_KEYS.reduce((acc, k) => acc || row[k] || "", "") || "").trim(),
+        })).filter(r => r.name && r.phone);
+
+        if (parsed.length === 0) {
+          toast({ title: "No valid rows", description: "CSV needs name and phone columns.", variant: "destructive" });
+          return;
+        }
+        setCsvContacts(parsed);
         setAudSource("csv");
-        toast({ title: `Loaded ${rows.length} contacts from CSV` });
+        toast({ title: `Loaded ${parsed.length} contacts`, description: "Preview below. Only name & phone extracted." });
       },
     });
     e.target.value = "";
@@ -163,21 +180,20 @@ export default function BroadcastPage() {
           </p>
         </div>
 
-        <Drawer open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-          <DrawerTrigger asChild>
-            <Button
-              className="rounded-xl bg-gradient-to-br from-primary to-primary/85 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
-              data-testid="broadcast-create-open"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New campaign
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent className="rounded-t-3xl" data-testid="broadcast-builder-drawer">
-            <div className="mx-auto w-full max-w-5xl p-4">
-              <DrawerHeader className="px-0">
-                <DrawerTitle>Campaign builder</DrawerTitle>
-              </DrawerHeader>
+        <Button
+            onClick={() => { setOpen(true); }}
+            className="rounded-xl bg-gradient-to-br from-primary to-primary/85 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
+            data-testid="broadcast-create-open"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New campaign
+          </Button>
+
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+          <DialogContent className="w-full max-w-[900px] max-h-[90vh] overflow-auto rounded-2xl" data-testid="broadcast-builder-drawer">
+            <DialogHeader className="px-0">
+              <DialogTitle>Campaign builder</DialogTitle>
+            </DialogHeader>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
                 <Card className="rounded-2xl border-card-border bg-card/70 shadow-sm">
@@ -402,14 +418,11 @@ export default function BroadcastPage() {
                       </ul>
                     </div>
                   </Card>
-                  <DrawerClose asChild>
-                    <Button variant="outline" className="w-full rounded-xl" data-testid="broadcast-close">Close</Button>
-                  </DrawerClose>
+                  <Button variant="outline" className="w-full rounded-xl" onClick={() => { setOpen(false); reset(); }} data-testid="broadcast-close">Close</Button>
                 </div>
               </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Campaigns table */}

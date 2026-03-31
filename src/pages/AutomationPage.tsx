@@ -1,341 +1,180 @@
+/**
+ * AutomationPage — DEMO MODE ONLY
+ * /automation endpoint does NOT exist in the backend API contract.
+ * This page shows an interactive demo of what automation would look like.
+ */
 import * as React from "react";
-import type { AutomationRule } from "@shared/schema";
-import { useAutomationRules, useCreateAutomationRule, useUpdateAutomationRule } from "@/hooks/use-automation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Sparkles, Wand2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Sparkles, Wand2, Zap, MessageSquare, Users, Clock, ChevronRight, Play } from "lucide-react";
 
-function ruleSummary(r: Partial<AutomationRule>) {
-  const t = r.triggerType ? `${r.triggerType}${r.triggerValue ? `(${r.triggerValue})` : ""}` : "—";
-  const c = r.conditionType ? `${r.conditionType}${r.conditionValue ? `(${r.conditionValue})` : ""}` : "Any";
-  const a = r.actionType ? `${r.actionType}${r.actionValue ? `(${r.actionValue})` : ""}` : "—";
-  return `When ${t} and ${c}, do ${a}.`;
-}
+const DEMO_RULES = [
+  {
+    id: 1,
+    name: "Welcome New Lead",
+    enabled: true,
+    trigger: "contact.stage = new",
+    condition: "Any",
+    action: "Send template: Welcome Message",
+    runs: 148,
+    lastRun: "2 min ago",
+    color: "bg-emerald-500",
+  },
+  {
+    id: 2,
+    name: "Follow-up After 3 Days",
+    enabled: true,
+    trigger: "contact.stage = contacted",
+    condition: "No reply in 3 days",
+    action: "Send template: Follow-up Nudge",
+    runs: 92,
+    lastRun: "1 hr ago",
+    color: "bg-blue-500",
+  },
+  {
+    id: 3,
+    name: "Qualified → Send Proposal",
+    enabled: false,
+    trigger: "contact.stage = qualified",
+    condition: "Any",
+    action: "Send template: Proposal Ready",
+    runs: 34,
+    lastRun: "Yesterday",
+    color: "bg-violet-500",
+  },
+  {
+    id: 4,
+    name: "Re-engage Lost Contacts",
+    enabled: true,
+    trigger: "contact.stage = lost",
+    condition: "30 days since last message",
+    action: "Send template: We Miss You",
+    runs: 21,
+    lastRun: "3 days ago",
+    color: "bg-amber-500",
+  },
+];
 
-function RuleEditor({
-  initial,
-  saving,
-  onSave,
-}: {
-  initial?: Partial<AutomationRule>;
-  saving?: boolean;
-  onSave: (data: Partial<AutomationRule>) => void;
-}) {
-  const [name, setName] = React.useState(initial?.name ?? "");
-  const [enabled, setEnabled] = React.useState(initial?.enabled ?? true);
-  const [triggerType, setTriggerType] = React.useState(initial?.triggerType ?? "contact.stage.changed");
-  const [triggerValue, setTriggerValue] = React.useState(initial?.triggerValue ?? "");
-  const [conditionType, setConditionType] = React.useState(initial?.conditionType ?? "");
-  const [conditionValue, setConditionValue] = React.useState(initial?.conditionValue ?? "");
-  const [actionType, setActionType] = React.useState(initial?.actionType ?? "send.template");
-  const [actionValue, setActionValue] = React.useState(initial?.actionValue ?? "");
-
-  const draft: Partial<AutomationRule> = {
-    name,
-    enabled,
-    triggerType,
-    triggerValue: triggerValue || null,
-    conditionType: conditionType || null,
-    conditionValue: conditionValue || null,
-    actionType,
-    actionValue: actionValue || null,
-  } as any;
-
-  return (
-    <div className="space-y-4" data-testid="automation-editor">
-      <div className="rounded-2xl border border-card-border bg-gradient-to-br from-primary/10 to-accent/10 p-4">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Live summary
-        </div>
-        <div className="mt-2 text-sm leading-relaxed">{ruleSummary(draft)}</div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="sm:col-span-2">
-          <label className="text-xs font-semibold text-muted-foreground">Rule name</label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="Auto-follow-up for Engaged leads"
-            data-testid="automation-name"
-          />
-        </div>
-
-        <div className="sm:col-span-2 flex items-center justify-between rounded-2xl border border-card-border bg-background/40 px-4 py-3">
-          <div>
-            <div className="text-sm font-semibold">Enabled</div>
-            <div className="text-xs text-muted-foreground">Turn rule on/off without deleting.</div>
-          </div>
-          <Switch checked={enabled} onCheckedChange={setEnabled} data-testid="automation-enabled" />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Trigger type</label>
-          <Input
-            value={triggerType}
-            onChange={(e) => setTriggerType(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="contact.stage.changed"
-            data-testid="automation-triggerType"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Trigger value</label>
-          <Input
-            value={triggerValue}
-            onChange={(e) => setTriggerValue(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="Interested"
-            data-testid="automation-triggerValue"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Condition type</label>
-          <Input
-            value={conditionType}
-            onChange={(e) => setConditionType(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="tag.includes"
-            data-testid="automation-conditionType"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Condition value</label>
-          <Input
-            value={conditionValue}
-            onChange={(e) => setConditionValue(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="vip"
-            data-testid="automation-conditionValue"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Action type</label>
-          <Input
-            value={actionType}
-            onChange={(e) => setActionType(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="send.template"
-            data-testid="automation-actionType"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground">Action value</label>
-          <Input
-            value={actionValue}
-            onChange={(e) => setActionValue(e.target.value)}
-            className="mt-1 rounded-xl focus-ring"
-            placeholder="templateId:12"
-            data-testid="automation-actionValue"
-          />
-        </div>
-      </div>
-
-      <Button
-        onClick={() => onSave(draft)}
-        disabled={saving || !name.trim() || !triggerType.trim() || !actionType.trim()}
-        className="w-full rounded-xl shadow-sm hover:shadow-md transition-all"
-        data-testid="automation-save"
-      >
-        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
-        Save rule
-      </Button>
-    </div>
-  );
-}
+const DEMO_TEMPLATES = [
+  { icon: "🎉", name: "New Lead Welcome", trigger: "Stage → New", desc: "Sends instant welcome when a new contact is added" },
+  { icon: "🔔", name: "Inactivity Follow-up", trigger: "No reply 3d", desc: "Auto follow-up when contact goes quiet" },
+  { icon: "📋", name: "Proposal Ready", trigger: "Stage → Qualified", desc: "Sends proposal link when lead is qualified" },
+  { icon: "🏆", name: "Deal Won Celebration", trigger: "Stage → Converted", desc: "Congratulates and onboards new customers" },
+];
 
 export default function AutomationPage() {
-  const { toast } = useToast();
-  const q = useAutomationRules();
-  const createM = useCreateAutomationRule();
-  const updateM = useUpdateAutomationRule();
+  const [demoRules, setDemoRules] = React.useState(DEMO_RULES);
+  const [showBanner, setShowBanner] = React.useState(true);
 
-  const rules = (q.data || []) as unknown as AutomationRule[];
-  const [editing, setEditing] = React.useState<AutomationRule | null>(null);
-  const [creating, setCreating] = React.useState(false);
+  const toggleRule = (id: number) => {
+    setDemoRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-automation">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl">Automation</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Rules table + slide-over editor. Toggle enabled instantly.
-          </p>
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6" data-testid="page-automation">
+      {/* Demo Banner */}
+      {showBanner && (
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-5 py-4 flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Demo Mode — Automation Preview</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              The Automation API is not yet available. This is an interactive preview of what your automation workflows will look like.
+              Toggle rules, explore templates — changes are local only.
+            </p>
+          </div>
+          <button onClick={() => setShowBanner(false)} className="text-amber-500 hover:text-amber-700 text-lg font-bold shrink-0">×</button>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="rounded-xl" onClick={() => q.refetch()} data-testid="automation-refresh">
-            Refresh
-          </Button>
-          <Drawer open={creating} onOpenChange={setCreating}>
-            <DrawerTrigger asChild>
-              <Button
-                className="rounded-xl bg-gradient-to-br from-primary to-primary/85 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
-                data-testid="automation-create-open"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New rule
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent className="rounded-t-3xl" data-testid="automation-create-drawer">
-              <div className="mx-auto w-full max-w-2xl p-4">
-                <DrawerHeader className="px-0">
-                  <DrawerTitle>Create rule</DrawerTitle>
-                </DrawerHeader>
-                <RuleEditor
-                  saving={createM.isPending}
-                  onSave={(data) => {
-                    createM.mutate(data as any, {
-                      onSuccess: () => {
-                        toast({ title: "Created", description: "Automation rule added." });
-                        setCreating(false);
-                      },
-                      onError: (e) =>
-                        toast({ title: "Create failed", description: String(e.message || e), variant: "destructive" }),
-                    });
-                  }}
-                />
-                <div className="mt-3">
-                  <DrawerClose asChild>
-                    <Button variant="outline" className="w-full rounded-xl" data-testid="automation-create-close">
-                      Close
-                    </Button>
-                  </DrawerClose>
-                </div>
-              </div>
-            </DrawerContent>
-          </Drawer>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Wand2 className="h-6 w-6 text-primary" /> Automation
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Build trigger-based workflows to auto-message your contacts at the right time.</p>
         </div>
+        <Button disabled className="gap-2 opacity-60" title="Coming soon">
+          <Zap className="h-4 w-4" /> New Rule
+        </Button>
       </div>
 
-      <Card className="surface-glass rounded-2xl mt-5 overflow-hidden">
-        <div className="p-4 border-b border-card-border bg-card/60 backdrop-blur">
-          <div className="text-sm font-semibold" data-testid="automation-count">
-            {rules.length} rules
-          </div>
-          <div className="text-xs text-muted-foreground">Keep it simple: one trigger → one action.</div>
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Active Rules", value: demoRules.filter(r => r.enabled).length, icon: Zap, color: "text-emerald-500" },
+          { label: "Total Runs", value: demoRules.reduce((a, r) => a + r.runs, 0), icon: Play, color: "text-blue-500" },
+          { label: "Contacts Reached", value: "482", icon: Users, color: "text-violet-500" },
+        ].map((s) => (
+          <Card key={s.label} className="p-4 rounded-xl">
+            <div className="flex items-center gap-2">
+              <s.icon className={`h-4 w-4 ${s.color}`} />
+              <span className="text-xs text-muted-foreground">{s.label}</span>
+            </div>
+            <div className="mt-2 text-2xl font-bold">{s.value}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Rules Table */}
+      <Card className="rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b flex items-center justify-between">
+          <h2 className="font-semibold text-sm">Automation Rules</h2>
+          <Badge variant="secondary" className="text-[10px]">Demo Data</Badge>
         </div>
-
-        <div className="p-2 sm:p-3">
-          {q.isLoading ? (
-            <div className="p-6 text-sm text-muted-foreground" data-testid="automation-loading">
-              <Loader2 className="inline-block h-4 w-4 animate-spin mr-2" />
-              Loading rules…
+        <div className="divide-y divide-border">
+          {demoRules.map((rule) => (
+            <div key={rule.id} className="px-5 py-4 flex items-start gap-4 hover:bg-muted/20 transition-colors">
+              <div className={`h-2 w-2 rounded-full mt-2 shrink-0 ${rule.color}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{rule.name}</span>
+                  {rule.enabled && <Badge className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Active</Badge>}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                  <span><strong>When:</strong> {rule.trigger}</span>
+                  <span><strong>If:</strong> {rule.condition}</span>
+                  <span><strong>Do:</strong> {rule.action}</span>
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground/70">
+                  {rule.runs} runs · Last: {rule.lastRun}
+                </div>
+              </div>
+              <Switch checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />
             </div>
-          ) : q.isError ? (
-            <div className="p-6 text-sm text-destructive" data-testid="automation-error">
-              Failed to load. ({String((q.error as any)?.message || q.error)})
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground" data-testid="automation-empty">
-              No rules yet. Create one to start automating follow-ups.
-            </div>
-          ) : (
-            <div className="overflow-auto">
-              <Table data-testid="automation-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[220px]">Name</TableHead>
-                    <TableHead className="min-w-[260px]">Summary</TableHead>
-                    <TableHead className="min-w-[120px]">Enabled</TableHead>
-                    <TableHead className="text-right min-w-[180px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rules.map((r: any) => (
-                    <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-semibold">{r.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {ruleSummary(r)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={!!r.enabled}
-                            onCheckedChange={(v) => {
-                              updateM.mutate(
-                                { id: r.id, updates: { enabled: v } as any },
-                                {
-                                  onError: (e) =>
-                                    toast({ title: "Update failed", description: String(e.message || e), variant: "destructive" }),
-                                },
-                              );
-                            }}
-                            data-testid={`automation-toggle-${r.id}`}
-                          />
-                          <span className="text-xs text-muted-foreground">{r.enabled ? "On" : "Off"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          className="rounded-xl"
-                          onClick={() => setEditing(r)}
-                          data-testid={`automation-edit-open-${r.id}`}
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              <Drawer open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-                <DrawerTrigger asChild>
-                  <span className="hidden" />
-                </DrawerTrigger>
-                <DrawerContent className="rounded-t-3xl" data-testid="automation-edit-drawer">
-                  <div className="mx-auto w-full max-w-2xl p-4">
-                    <DrawerHeader className="px-0">
-                      <DrawerTitle>Edit rule</DrawerTitle>
-                    </DrawerHeader>
-                    {editing ? (
-                      <RuleEditor
-                        initial={editing}
-                        saving={updateM.isPending}
-                        onSave={(data) => {
-                          updateM.mutate(
-                            { id: (editing as any).id, updates: data as any },
-                            {
-                              onSuccess: () => {
-                                toast({ title: "Saved", description: "Rule updated." });
-                                setEditing(null);
-                              },
-                              onError: (e) =>
-                                toast({ title: "Save failed", description: String(e.message || e), variant: "destructive" }),
-                            },
-                          );
-                        }}
-                      />
-                    ) : null}
-                    <div className="mt-3">
-                      <DrawerClose asChild>
-                        <Button variant="outline" className="w-full rounded-xl" data-testid="automation-edit-close">
-                          Close
-                        </Button>
-                      </DrawerClose>
-                    </div>
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </div>
-          )}
+          ))}
         </div>
       </Card>
+
+      {/* Template Gallery */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" /> Quick-Start Templates
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {DEMO_TEMPLATES.map((t) => (
+            <Card key={t.name} className="p-4 rounded-xl hover:shadow-md transition-all cursor-default group">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">{t.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{t.name}</span>
+                    <Badge variant="outline" className="text-[10px]">{t.trigger}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" disabled>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground text-center">Automation API coming soon. Templates will be live once the backend endpoint is available.</p>
+      </div>
     </div>
   );
 }
