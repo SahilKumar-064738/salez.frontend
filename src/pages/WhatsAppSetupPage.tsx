@@ -356,7 +356,7 @@ export default function WhatsAppSetupPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 rise-in" data-testid="page-whatsapp-setup">
+    <div className="w-full px-6 lg:px-12 py-6 rise-in" data-testid="page-whatsapp-setup">
 
       {/* Header */}
       <div className="mb-6">
@@ -405,7 +405,7 @@ export default function WhatsAppSetupPage() {
         </div>
 
         {/* Step content */}
-        <div className="p-5 space-y-4">
+        <div className="p-6 lg:p-8 space-y-6">
 
           {/* ── STEP 0: Business Identity ── */}
           {step === 0 && (
@@ -805,7 +805,7 @@ export default function WhatsAppSetupPage() {
         </div>
 
         {/* Footer nav */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-card-border bg-card/60 backdrop-blur">
+        <div className="flex items-center justify-between px-6 lg:px-8 py-5 border-t border-card-border bg-card/60 backdrop-blur">
           <div className="flex items-center gap-2">
             {step > 0 && (
               <Button variant="outline" className="rounded-xl" onClick={() => setStep(s => s - 1)}>

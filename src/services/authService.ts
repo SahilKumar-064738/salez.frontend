@@ -19,6 +19,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   companyName?: string;  // maps to businessName in the API call
+  businessType?: string; // forwarded to backend if supported
   phone?: string;        // accepted here, not forwarded (not in backend schema)
 }
 
@@ -43,6 +44,9 @@ export const authService = {
    * FIX (Issue 1): passes name as displayName, companyName as businessName
    */
   async register(payload: RegisterPayload): Promise<{ token: string; user: AuthUser }> {
+    // Clear any stale token before registering
+    removeAuthToken();
+
     const user = await signupUser({
       name: payload.name,           // signupUser maps this to displayName
       companyName: payload.companyName,
@@ -50,8 +54,9 @@ export const authService = {
       password: payload.password,
       // phone intentionally not forwarded — not in backend RegisterSchema
     });
+
     const token = getAuthToken();
-    if (!token) throw new Error("Token not received from server");
+    if (!token) throw new Error("Token not generated. Please try logging in.");
     return { token, user };
   },
 

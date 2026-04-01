@@ -55,6 +55,7 @@ export function useSignup(onSignedUp?: () => void) {
         email: data.email,
         password: data.password,
         companyName: data.businessName,
+        businessType: data.businessType,
         phone: data.phone,
       });
     },

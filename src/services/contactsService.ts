@@ -132,17 +132,29 @@ export const contactsService = {
   },
 
   async bulkCreate(contacts: { name: string; phone: string }[]): Promise<{ created: number; failed: number; errors: string[] }> {
-    let created = 0, failed = 0;
-    const errors: string[] = [];
-    for (const c of contacts) {
-      try {
-        await contactsService.create({ phone: c.phone, name: c.name });
-        created++;
-      } catch (e: any) {
-        failed++;
-        errors.push(`${c.name} (${c.phone}): ${e?.message ?? "Error"}`);
+    try {
+      // Send a single bulk upsert request — backend does INSERT ... ON CONFLICT DO UPDATE
+      const raw = await apiPost<any>("/contacts/bulk", { contacts });
+      const d = raw?.data ?? raw ?? {};
+      return {
+        created: Number(d.created ?? contacts.length),
+        failed: 0,
+        errors: [],
+      };
+    } catch {
+      // Fallback: one-by-one with upsert param so server overwrites duplicates
+      let created = 0, failed = 0;
+      const errors: string[] = [];
+      for (const c of contacts) {
+        try {
+          await apiPost<any>("/contacts", { phone: c.phone, name: c.name, upsert: true });
+          created++;
+        } catch (e: any) {
+          failed++;
+          errors.push(`${c.name} (${c.phone}): ${e?.message ?? "Error"}`);
+        }
       }
+      return { created, failed, errors };
     }
-    return { created, failed, errors };
   },
 };

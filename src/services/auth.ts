@@ -107,6 +107,7 @@ export async function signupUser(data: {
   name: string;            // maps to displayName
   companyName?: string;    // maps to businessName
   businessName?: string;
+  businessType?: string;   // forwarded to backend
   email: string;
   password: string;
   phone?: string;          // backend ignores this but we accept it gracefully
@@ -118,6 +119,7 @@ export async function signupUser(data: {
     body: JSON.stringify({
       displayName: data.name,                                    // ← renamed
       businessName: data.businessName ?? data.companyName ?? "", // ← renamed
+      businessType: data.businessType,                           // forwarded
       email: data.email,
       password: data.password,
       // phone intentionally omitted — not in backend RegisterSchema

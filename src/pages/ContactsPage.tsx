@@ -88,9 +88,10 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
     const res = await contactsService.bulkCreate(preview);
     setImporting(false);
     setResult(res);
-    if (res.created > 0) {
-      toast({ title: `Imported ${res.created} contacts`, description: res.failed ? `${res.failed} failed.` : "All imported successfully." });
-    }
+    toast({
+      title: `✔ Contacts updated successfully`,
+      description: `${res.created} contact${res.created !== 1 ? "s" : ""} imported or updated.`,
+    });
   };
 
   return (
@@ -104,13 +105,11 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
           <div className="space-y-4 py-2">
             <div className="rounded-xl border p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" />{result.created} contacts imported
+                <CheckCircle2 className="h-4 w-4" />
+                {result.failed === 0
+                  ? `✔ ${result.created} contact${result.created !== 1 ? "s" : ""} imported or updated`
+                  : `${result.created} imported, ${result.failed} skipped`}
               </div>
-              {result.failed > 0 && (
-                <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
-                  <AlertCircle className="h-4 w-4" />{result.failed} failed
-                </div>
-              )}
               {result.errors.slice(0, 5).map((err, i) => (
                 <p key={i} className="text-xs text-muted-foreground">• {err}</p>
               ))}
