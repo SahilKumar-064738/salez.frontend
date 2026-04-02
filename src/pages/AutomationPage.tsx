@@ -447,7 +447,7 @@ export default function AutomationPage() {
     const updated = { ...rule, enabled: !rule.enabled };
     setRules((prev) => prev.map((r) => (r.id === rule.id ? updated : r)));
     try {
-      await api.put(`/api/v1/automation/${rule.id}`, updated);
+      await api.patch(`/api/v1/automation/${rule.id}`, updated);
     } catch {
       // revert on failure
       setRules((prev) => prev.map((r) => (r.id === rule.id ? rule : r)));

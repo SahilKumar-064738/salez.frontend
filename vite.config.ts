@@ -22,9 +22,9 @@ export default defineConfig({
 
   server: {
     proxy: {
-      // Dev proxy: /api/v1/* → http://localhost:5000/api/v1/*
+      // Dev proxy: /api/v1/* → http://localhost:4000/api/v1/*
       "/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:4000",
         changeOrigin: true,
         secure: false,
       },

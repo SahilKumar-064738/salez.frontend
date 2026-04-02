@@ -20,6 +20,14 @@
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL ?? '';
 
+/**
+ * Build a full URL from a path — used by auth.ts for raw fetch() calls
+ * that need the absolute URL (not going through apiFetch).
+ */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 const TOKEN_KEY = 'auth_token';
 
 function getStoredToken(): string | null {
@@ -74,3 +82,43 @@ export async function apiFetch<T>(
 
   return res.json() as Promise<T>;
 }
+/**
+ * `api` — convenience object used by pages that imported { api } from "@/lib/api".
+ * Delegates to apiFetch, automatically prepending /api/v1 like apiClient does.
+ */
+function v1(path: string): string {
+  if (path.startsWith('/api/v1')) return path;
+  if (path.startsWith('/api/')) return path.replace('/api/', '/api/v1/');
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `/api/v1${clean}`;
+}
+
+export const api = {
+  get<T>(path: string, options?: RequestInit): Promise<T> {
+    return apiFetch<T>(v1(path), { method: 'GET', ...options });
+  },
+  post<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return apiFetch<T>(v1(path), {
+      method: 'POST',
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      ...options,
+    });
+  },
+  put<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return apiFetch<T>(v1(path), {
+      method: 'PUT',
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      ...options,
+    });
+  },
+  patch<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return apiFetch<T>(v1(path), {
+      method: 'PATCH',
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      ...options,
+    });
+  },
+  delete<T = void>(path: string, options?: RequestInit): Promise<T> {
+    return apiFetch<T>(v1(path), { method: 'DELETE', ...options });
+  },
+};
