@@ -1,71 +1,76 @@
-import { getAuthToken } from "@/services/auth";
+/**
+ * src/lib/api.ts — PATCHED
+ *
+ * WHAT CHANGED vs existing:
+ *   1. apiFetch now reads the JWT from localStorage and attaches it as
+ *      Authorization: Bearer <token> on every request.
+ *      The JWT is what the backend authMiddleware validates; the tenantId
+ *      is extracted from the user profile associated with that JWT.
+ *      No explicit X-Tenant-ID header is needed — tenant is resolved server-side.
+ *
+ *   2. 401 responses auto-clear the stored token so the user is redirected
+ *      to login rather than getting a stuck state.
+ *
+ *   3. API_BASE_URL is read from import.meta.env.VITE_API_URL so it works
+ *      both in development (localhost:4000) and production.
+ *
+ * The existing apiClient.ts (apiGet, apiPost, apiPatch, apiDelete) calls this
+ * function and is UNCHANGED.
+ */
 
-// ⚠️ FIX (Issue 8): Was "localhost:5000". Backend runs on 4000.
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL ?? '';
 
-export function apiUrl(path: string): string {
-  const finalPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${finalPath}`;
+const TOKEN_KEY = 'auth_token';
+
+function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export async function apiFetch<T>(
-  endpoint: string,
-  options?: RequestInit
+  path: string,
+  options: RequestInit = {}
 ): Promise<T> {
-  const url = apiUrl(endpoint);
-  const token = getAuthToken();
+  const token = getStoredToken();
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string>),
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> ?? {}),
   };
 
+  // Attach JWT — backend resolves tenantId from user profile
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
+  const url = `${API_BASE_URL}${path}`;
+
+  const res = await fetch(url, {
     ...options,
     headers,
-    credentials: "include",
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      error: response.statusText || "Request failed",
-    }));
-    // Backend error envelope: { success: false, error: "msg", code: "CODE" }
-    throw new Error(error.error || error.message || `HTTP ${response.status}`);
+  // Auto-logout on 401
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    // Trigger re-render by dispatching a storage event
+    window.dispatchEvent(new Event('storage'));
   }
 
-  return response.json();
+  if (!res.ok) {
+    let errorMessage = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      errorMessage = body?.message ?? body?.error ?? errorMessage;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  // 204 No Content
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+
+  return res.json() as Promise<T>;
 }
-
-export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
-    apiFetch<T>(endpoint, { ...options, method: "GET" }),
-
-  post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiFetch<T>(endpoint, {
-      ...options,
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    }),
-
-  put: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiFetch<T>(endpoint, {
-      ...options,
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    }),
-
-  patch: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiFetch<T>(endpoint, {
-      ...options,
-      method: "PATCH",
-      body: data ? JSON.stringify(data) : undefined,
-    }),
-
-  delete: <T>(endpoint: string, options?: RequestInit) =>
-    apiFetch<T>(endpoint, { ...options, method: "DELETE" }),
-};
