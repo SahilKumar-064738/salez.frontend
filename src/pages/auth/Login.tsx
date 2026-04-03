@@ -60,7 +60,12 @@ const login = useLogin(() => {
             )} />
             <FormField control={form.control} name="password" render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Password</FormLabel>
+                  <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline font-medium">
+                    Forgot Password?
+                  </Link>
+                </div>
                 <FormControl><Input type="password" {...field} className="rounded-lg" /></FormControl>
                 <FormMessage />
               </FormItem>

@@ -16,6 +16,8 @@ import { Loader2, MessageSquareText, Plus, Search, Tag, X, Upload, Download, Eye
 import { useToast } from "@/hooks/use-toast";
 import { stages, stageLabels } from "@shared/schema";
 import Papa from "papaparse";
+import { useImport } from "@/context/ImportContext";
+import { sanitizePhone, sanitizeName } from "@/lib/inputValidation";
 
 function useDebounced<T>(value: T, delay = 250) {
   const [v, setV] = React.useState(value);
@@ -58,11 +60,12 @@ function parseCSVContacts(rows: any[]): { name: string; phone: string }[] {
   }).filter((r) => r.name && r.phone);
 }
 
-function CSVImportModal({ onClose }: { onClose: () => void }) {
+function CSVImportModal({ onClose, onStartImport }: {
+  onClose: () => void;
+  onStartImport: (contacts: { name: string; phone: string }[]) => void;
+}) {
   const { toast } = useToast();
   const [preview, setPreview] = React.useState<{ name: string; phone: string }[] | null>(null);
-  const [importing, setImporting] = React.useState(false);
-  const [result, setResult] = React.useState<{ created: number; failed: number; errors: string[] } | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,16 +85,11 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
     e.target.value = "";
   };
 
-  const handleImport = async () => {
+  const handleImport = () => {
     if (!preview) return;
-    setImporting(true);
-    const res = await contactsService.bulkCreate(preview);
-    setImporting(false);
-    setResult(res);
-    toast({
-      title: `✔ Contacts updated successfully`,
-      description: `${res.created} contact${res.created !== 1 ? "s" : ""} imported or updated.`,
-    });
+    // Close modal immediately — import runs in background via ImportContext
+    onStartImport(preview);
+    onClose();
   };
 
   return (
@@ -101,22 +99,7 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
           <DialogTitle className="flex items-center gap-2"><Upload className="h-4 w-4" /> Import Contacts from CSV</DialogTitle>
         </DialogHeader>
 
-        {result ? (
-          <div className="space-y-4 py-2">
-            <div className="rounded-xl border p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" />
-                {result.failed === 0
-                  ? `✔ ${result.created} contact${result.created !== 1 ? "s" : ""} imported or updated`
-                  : `${result.created} imported, ${result.failed} skipped`}
-              </div>
-              {result.errors.slice(0, 5).map((err, i) => (
-                <p key={i} className="text-xs text-muted-foreground">• {err}</p>
-              ))}
-            </div>
-            <Button className="w-full" onClick={onClose}>Done</Button>
-          </div>
-        ) : preview ? (
+        {preview ? (
           <div className="space-y-4 py-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" /> Preview — {preview.length} contacts detected
@@ -147,8 +130,8 @@ function CSVImportModal({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-muted-foreground">Only <strong>name</strong> and <strong>phone</strong> fields are imported. All other columns are ignored.</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setPreview(null)} className="flex-1">← Back</Button>
-              <Button onClick={handleImport} disabled={importing} className="flex-1">
-                {importing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Importing…</> : `Import ${preview.length} Contacts`}
+              <Button onClick={handleImport} className="flex-1">
+                Import {preview.length} Contacts
               </Button>
             </div>
           </div>
@@ -193,11 +176,11 @@ function ContactEditor({ mode, initial, onSave, saving }: {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-semibold text-muted-foreground">Name *</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="mt-1" />
+          <Input value={name} onChange={(e) => setName(sanitizeName(e.target.value))} placeholder="John Doe" className="mt-1" />
         </div>
         <div>
           <label className="text-xs font-semibold text-muted-foreground">Phone *</label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 99999 99999" className="mt-1" disabled={mode === "edit"} />
+          <Input value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} placeholder="+91 99999 99999" className="mt-1" disabled={mode === "edit"} inputMode="numeric" maxLength={10} />
           {mode === "edit" && <p className="text-[10px] text-muted-foreground mt-1">Phone cannot be changed after creation.</p>}
         </div>
       </div>
@@ -226,6 +209,7 @@ function ContactEditor({ mode, initial, onSave, saving }: {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function ContactsPage() {
   const { toast } = useToast();
+  const { startImport, finishImport } = useImport();
   const [search, setSearch] = React.useState("");
   const debounced = useDebounced(search);
   const [stage, setStage] = React.useState<string>("all");
@@ -246,6 +230,18 @@ export default function ContactsPage() {
     contacts.forEach((c: any) => (c.tags || []).forEach((t: string) => set.add(t)));
     return Array.from(set).sort().slice(0, 30);
   }, [contacts]);
+
+  // Background CSV import — closes modal immediately, runs API in background
+  const handleStartImport = React.useCallback(async (contactsToImport: { name: string; phone: string }[]) => {
+    startImport(contactsToImport);
+    try {
+      const res = await contactsService.bulkCreate(contactsToImport);
+      finishImport(res.created, res.failed);
+      q.refetch();
+    } catch {
+      finishImport(0, contactsToImport.length);
+    }
+  }, [startImport, finishImport, q]);
 
   // ── CSV Export ────────────────────────────────────────────────────────────
   const handleExport = () => {
@@ -270,7 +266,7 @@ export default function ContactsPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]" data-testid="page-contacts">
-      {csvOpen && <CSVImportModal onClose={() => { setCsvOpen(false); q.refetch(); }} />}
+      {csvOpen && <CSVImportModal onClose={() => setCsvOpen(false)} onStartImport={handleStartImport} />}
 
       <Card className="surface-glass rounded-none sm:rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0 m-0 sm:m-4 border-0 sm:border">
         {/* Header */}

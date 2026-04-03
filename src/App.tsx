@@ -5,6 +5,8 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ImportProvider } from "@/context/ImportContext";
+import { ImportProgressWidget } from "@/components/ImportProgressWidget";
 import NotFound from "@/pages/not-found";
 
 import { Navbar } from "@/components/Navbar";
@@ -20,6 +22,8 @@ import MetaVerification from "@/pages/public/MetaVerification";
 import TemplateLanding from "@/pages/public/TemplateLanding";
 import Login from "@/pages/auth/Login";
 import Signup from "@/pages/auth/Signup";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 
 import {
   SidebarProvider,
@@ -199,6 +203,16 @@ function Router() {
           </PublicLayout>
         </AuthGate>
       </Route>
+      <Route path="/auth/forgot-password">
+        <PublicLayout>
+          <ForgotPassword />
+        </PublicLayout>
+      </Route>
+      <Route path="/auth/reset-password">
+        <PublicLayout>
+          <ResetPassword />
+        </PublicLayout>
+      </Route>
 
       {/* ── Protected app routes ─────────────────────────────────── */}
       <Route path="/inbox">
@@ -276,10 +290,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
+        <ImportProvider>
+          <TooltipProvider>
+            <Router />
+            <Toaster />
+            <ImportProgressWidget />
+          </TooltipProvider>
+        </ImportProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

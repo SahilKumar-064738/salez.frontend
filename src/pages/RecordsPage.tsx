@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { sanitizePhone, sanitizeName } from "@/lib/inputValidation";
 import {
   Dialog,
   DialogContent,
@@ -141,7 +142,7 @@ function RecordForm({
           </label>
           <Input
             value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
+            onChange={(e) => setClientName(sanitizeName(e.target.value))}
             placeholder="Ramesh Kumar"
             className="mt-1 rounded-xl"
           />
@@ -152,8 +153,10 @@ function RecordForm({
           </label>
           <Input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91 99999 99999"
+            onChange={(e) => setPhone(sanitizePhone(e.target.value))}
+            placeholder="9999999999"
+            inputMode="numeric"
+            maxLength={10}
             className="mt-1 rounded-xl"
           />
         </div>

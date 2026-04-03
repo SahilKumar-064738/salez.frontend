@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { sanitizePhone, sanitizeName } from "@/lib/inputValidation";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface TeamMember { id: number; name: string; role: string; specialization: string; contact: string; }
@@ -510,13 +511,13 @@ export default function WhatsAppSetupPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Primary Phone *">
-                  <Input type="tel" value={phone1} onChange={e => setPhone1(e.target.value)} placeholder="+91 98765 43210" className="rounded-xl focus-ring" />
+                  <Input type="tel" value={phone1} onChange={e => setPhone1(sanitizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} className="rounded-xl focus-ring" />
                 </Field>
                 <Field label="WhatsApp Number *">
-                  <Input type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+91 98765 43210" className="rounded-xl focus-ring" />
+                  <Input type="tel" value={whatsapp} onChange={e => setWhatsapp(sanitizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} className="rounded-xl focus-ring" />
                 </Field>
                 <Field label="Secondary Phone (optional)">
-                  <Input type="tel" value={phone2} onChange={e => setPhone2(e.target.value)} placeholder="+91 22 2345 6789" className="rounded-xl focus-ring" />
+                  <Input type="tel" value={phone2} onChange={e => setPhone2(sanitizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} className="rounded-xl focus-ring" />
                 </Field>
                 <Field label="General Email *">
                   <Input type="email" value={email1} onChange={e => setEmail1(e.target.value)} placeholder="hello@yourbusiness.com" className="rounded-xl focus-ring" />
@@ -574,7 +575,7 @@ export default function WhatsAppSetupPage() {
                       </button>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-8">
                         <Field label="Name">
-                          <Input value={t.name} onChange={e => updateTeam(t.id, "name", e.target.value)} placeholder="Team member name" className="rounded-xl focus-ring" />
+                          <Input value={t.name} onChange={e => updateTeam(t.id, "name", sanitizeName(e.target.value))} placeholder="Team member name" className="rounded-xl focus-ring" />
                         </Field>
                         <Field label="Role / Designation">
                           <Input value={t.role} onChange={e => updateTeam(t.id, "role", e.target.value)} placeholder="e.g. Senior Consultant" className="rounded-xl focus-ring" />

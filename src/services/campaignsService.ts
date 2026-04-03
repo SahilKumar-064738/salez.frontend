@@ -87,7 +87,7 @@ export const campaignsService = {
       name: data.name,
       templateId: data.templateId,
       whatsappAccountId: data.whatsappAccountId,
-      scheduledAt: data.scheduledAt ?? null,
+      scheduledAt: data.scheduledAt ?{ scheduledAt: data.scheduledAt } : {},
       contactIds: data.contactIds ?? [],        // ← correct field name
       filters: data.filters,
     });

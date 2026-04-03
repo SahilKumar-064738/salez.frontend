@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link, useLocation } from "wouter";
 import { MessageCircle, Home } from "lucide-react";
 import { useSignup } from "@/hooks/use-auth";
+import { makePhoneChangeHandler, makeNameChangeHandler } from "@/lib/inputValidation";
 
 const BUSINESS_TYPES = [
   "Clinic / Healthcare", "Coaching / Education", "Salon / Beauty",
@@ -73,7 +74,7 @@ export default function Signup() {
 
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Full Name</FormLabel>
-              <FormControl><Input placeholder="John Doe" {...field} className="rounded-lg" /></FormControl>
+              <FormControl><Input placeholder="John Doe" {...field} onChange={makeNameChangeHandler(field.onChange)} className="rounded-lg" /></FormControl>
               <FormMessage /></FormItem>
             )} />
 
@@ -85,7 +86,7 @@ export default function Signup() {
               )} />
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem><FormLabel>Phone <span className="text-slate-400 font-normal">(opt.)</span></FormLabel>
-                <FormControl><Input placeholder="+91 98765 43210" {...field} className="rounded-lg" /></FormControl>
+                <FormControl><Input placeholder="9876543210" {...field} onChange={makePhoneChangeHandler(field.onChange)} inputMode="numeric" maxLength={10} className="rounded-lg" /></FormControl>
                 <FormMessage /></FormItem>
               )} />
             </div>
