@@ -2,8 +2,8 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,9 @@ import {
   Circle,
   Layers,
   Settings2,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,18 +44,29 @@ import { cn } from "@/lib/utils";
 ───────────────────────────────────────────── */
 
 type ServiceType = "GST" | "ITR" | "TDS" | "ROC" | "Other";
-type ActionType =
-  | "Send WhatsApp Reminder"
-  | "Send Email Reminder"
-  | "Mark as Due Soon"
-  | "Escalate to Senior CA"
-  | "Custom";
+
+type ActionType = "whatsapp" | "email" | "mark_due_soon" | "escalate";
+
+interface ActionConfig {
+  type: ActionType;
+  template_id?: number | null; // only for whatsapp / email
+  delay_days: number;
+}
+
+interface ApprovedTemplate {
+  id: number;
+  name: string;
+  category: string;
+  variables: string[];
+}
 
 interface AutomationRule {
   id: number;
+  name: string;
   service_type: ServiceType;
-  delay_days: number;
-  action: ActionType | string;
+  trigger_type: string;
+  conditions: { service_type: ServiceType };
+  actions: ActionConfig[];
   enabled: boolean;
   created_at?: string;
   trigger_count?: number;
@@ -64,78 +78,449 @@ interface AutomationRule {
 
 const SERVICE_TYPES: ServiceType[] = ["GST", "ITR", "TDS", "ROC", "Other"];
 
-const ACTION_TYPES: ActionType[] = [
-  "Send WhatsApp Reminder",
-  "Send Email Reminder",
-  "Mark as Due Soon",
-  "Escalate to Senior CA",
-  "Custom",
+const ACTION_DEFINITIONS: {
+  type: ActionType;
+  label: string;
+  icon: React.ElementType;
+  needsTemplate: boolean;
+  color: string;
+}[] = [
+  {
+    type: "whatsapp",
+    label: "Send WhatsApp Reminder",
+    icon: MessageSquare,
+    needsTemplate: true,
+    color: "text-emerald-600",
+  },
+  {
+    type: "email",
+    label: "Send Email Reminder",
+    icon: Mail,
+    needsTemplate: true,
+    color: "text-blue-600",
+  },
+  {
+    type: "mark_due_soon",
+    label: "Mark as Due Soon",
+    icon: Clock,
+    needsTemplate: false,
+    color: "text-amber-600",
+  },
+  {
+    type: "escalate",
+    label: "Escalate to Senior CA",
+    icon: Settings2,
+    needsTemplate: false,
+    color: "text-purple-600",
+  },
 ];
 
-const ACTION_ICONS: Record<string, React.ElementType> = {
-  "Send WhatsApp Reminder": MessageSquare,
-  "Send Email Reminder": Mail,
-  "Mark as Due Soon": Clock,
-  "Escalate to Senior CA": Settings2,
-  Custom: Zap,
-};
-
-const SERVICE_COLORS: Record<ServiceType, { pill: string; dot: string }> = {
-  GST: {
-    pill: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    dot: "bg-sky-500",
-  },
-  ITR: {
-    pill: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-    dot: "bg-violet-500",
-  },
-  TDS: {
-    pill: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-    dot: "bg-teal-500",
-  },
-  ROC: {
-    pill: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-    dot: "bg-orange-500",
-  },
-  Other: {
-    pill: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    dot: "bg-slate-400",
-  },
+const SERVICE_COLORS: Record<ServiceType, string> = {
+  GST: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  ITR: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  TDS: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+  ROC: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  Other: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
 
 /* ─────────────────────────────────────────────
-   SMALL UI COMPONENTS
+   HOOKS
 ───────────────────────────────────────────── */
 
-function ServicePill({ type }: { type: ServiceType }) {
-  const { pill } = SERVICE_COLORS[type] || SERVICE_COLORS.Other;
+function useApprovedTemplates() {
+  const [templates, setTemplates] = React.useState<ApprovedTemplate[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setLoading(true);
+    api
+      .get<{ data: ApprovedTemplate[] }>("/api/v1/templates?status=approved")
+      .then((res) => {
+        const data = (res as any)?.data || res || [];
+        setTemplates(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setError("Failed to load templates"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { templates, loading, error };
+}
+
+/* ─────────────────────────────────────────────
+   ACTION ROW — one configured action block
+───────────────────────────────────────────── */
+
+function ActionRow({
+  config,
+  templates,
+  templatesLoading,
+  onChange,
+  onRemove,
+}: {
+  config: ActionConfig;
+  templates: ApprovedTemplate[];
+  templatesLoading: boolean;
+  onChange: (updated: ActionConfig) => void;
+  onRemove: () => void;
+}) {
+  const def = ACTION_DEFINITIONS.find((d) => d.type === config.type)!;
+  const Icon = def.icon;
+
   return (
-    <span
-      className={cn(
-        "inline-block rounded-md px-2.5 py-0.5 text-[11px] font-bold tracking-widest uppercase",
-        pill,
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
+        <div
+          className={cn(
+            "flex items-center gap-2 font-semibold text-sm",
+            def.color,
+          )}
+        >
+          <Icon className="h-4 w-4" />
+          {def.label}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={onRemove}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {/* Template picker — only for whatsapp / email */}
+      {def.needsTemplate && (
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Message Template <span className="text-destructive">*</span>
+          </label>
+          {templatesLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading approved templates…
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+              <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+              No approved templates found. Approve a template first.
+            </div>
+          ) : (
+            <Select
+              value={config.template_id?.toString() ?? ""}
+              onValueChange={(v) =>
+                onChange({ ...config, template_id: Number(v) })
+              }
+            >
+              <SelectTrigger className="h-9 rounded-xl text-sm">
+                <SelectValue placeholder="Select approved template…" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id.toString()}>
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">{t.name}</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">
+                        ({t.category})
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       )}
-    >
-      {type}
-    </span>
+
+      {/* Per-action delay */}
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex justify-between">
+          <span>Delay After Record Creation</span>
+          <span className="text-indigo-600 font-bold">
+            {config.delay_days} days
+          </span>
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={365}
+          value={config.delay_days}
+          onChange={(e) =>
+            onChange({ ...config, delay_days: Number(e.target.value) })
+          }
+          className="w-full accent-indigo-600"
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>1 day</span>
+          <span>365 days</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function ActionIcon({ action }: { action: string }) {
-  const Icon = ACTION_ICONS[action] || Zap;
-  return <Icon className="h-4 w-4" />;
+/* ─────────────────────────────────────────────
+   AUTOMATION FORM
+───────────────────────────────────────────── */
+
+export function AutomationForm({
+  onSave,
+  onClose,
+  saving,
+  initial,
+}: {
+  onSave: (data: {
+    name: string;
+    service_type: ServiceType;
+    trigger_type: string;
+    conditions: { service_type: ServiceType };
+    actions: ActionConfig[];
+    enabled: boolean;
+  }) => void;
+  onClose: () => void;
+  saving: boolean;
+  initial?: Partial<AutomationRule>;
+}) {
+  const [name, setName] = React.useState(initial?.name ?? "");
+  const [service, setService] = React.useState<ServiceType>(
+    initial?.conditions?.service_type ?? "GST",
+  );
+  const [actions, setActions] = React.useState<ActionConfig[]>(
+    initial?.actions ?? [],
+  );
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  const { templates, loading: templatesLoading } = useApprovedTemplates();
+
+  /* Derive which action types are already selected */
+  const selectedTypes = new Set(actions.map((a) => a.type));
+
+  /* Validation: every template-needing action must have a template_id */
+  const isValid =
+    name.trim().length > 0 &&
+    actions.length > 0 &&
+    actions.every((a) => {
+      const def = ACTION_DEFINITIONS.find((d) => d.type === a.type)!;
+      return !def.needsTemplate || !!a.template_id;
+    });
+
+  function addAction(type: ActionType) {
+    if (selectedTypes.has(type)) return; // no duplicates
+    setActions((prev) => [...prev, { type, template_id: null, delay_days: 7 }]);
+    setPickerOpen(false);
+  }
+
+  function updateAction(index: number, updated: ActionConfig) {
+    setActions((prev) => prev.map((a, i) => (i === index ? updated : a)));
+  }
+
+  function removeAction(index: number) {
+    setActions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  const availableToAdd = ACTION_DEFINITIONS.filter(
+    (d) => !selectedTypes.has(d.type),
+  );
+
+  return (
+    <div className="space-y-5 py-2">
+      {/* Rule name */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Rule Name <span className="text-destructive">*</span>
+        </label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. GST Due Reminder Flow"
+          className="rounded-xl h-9"
+        />
+      </div>
+
+      {/* Service type */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Trigger: When a record of type…
+        </label>
+        <Select
+          value={service}
+          onValueChange={(v) => setService(v as ServiceType)}
+        >
+          <SelectTrigger className="rounded-xl h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SERVICE_TYPES.map((s) => (
+              <SelectItem key={s} value={s}>
+                <span
+                  className={cn(
+                    "font-bold text-xs px-1.5 py-0.5 rounded",
+                    SERVICE_COLORS[s],
+                  )}
+                >
+                  {s}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          …is created, the actions below will fire after their configured delay.
+        </p>
+      </div>
+
+      {/* Actions section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Actions{" "}
+            <span className="text-muted-foreground/60 normal-case">
+              ({actions.length} selected)
+            </span>
+          </label>
+        </div>
+
+        {/* Existing action rows */}
+        {actions.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border/60 py-8 flex flex-col items-center gap-2 text-muted-foreground/60">
+            <Zap className="h-6 w-6" />
+            <p className="text-xs">No actions yet. Add at least one below.</p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {actions.map((action, idx) => (
+            <ActionRow
+              key={`${action.type}-${idx}`}
+              config={action}
+              templates={templates}
+              templatesLoading={templatesLoading}
+              onChange={(updated) => updateAction(idx, updated)}
+              onRemove={() => removeAction(idx)}
+            />
+          ))}
+        </div>
+
+        {/* Add action picker */}
+        {availableToAdd.length > 0 && (
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full rounded-xl h-9 border-dashed gap-2 text-xs"
+              onClick={() => setPickerOpen((v) => !v)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Action
+              {pickerOpen ? (
+                <ChevronUp className="h-3.5 w-3.5 ml-auto" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 ml-auto" />
+              )}
+            </Button>
+
+            {pickerOpen && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-popover shadow-lg overflow-hidden">
+                {availableToAdd.map((def) => {
+                  const Icon = def.icon;
+                  return (
+                    <button
+                      key={def.type}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors text-left"
+                      onClick={() => addAction(def.type)}
+                    >
+                      <Icon className={cn("h-4 w-4", def.color)} />
+                      {def.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Preview */}
+      {actions.length > 0 && (
+        <div className="rounded-xl border border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 p-3 space-y-1.5">
+          <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
+            Rule Preview
+          </p>
+          {actions.map((a, i) => {
+            const def = ACTION_DEFINITIONS.find((d) => d.type === a.type)!;
+            const tpl = templates.find((t) => t.id === a.template_id);
+            return (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 text-[12px] text-indigo-700 dark:text-indigo-300"
+              >
+                <ArrowRight className="h-3 w-3 opacity-50" />
+                <strong>{def.label}</strong>
+                {tpl && (
+                  <>
+                    {" "}
+                    using <em>"{tpl.name}"</em>
+                  </>
+                )}
+                {" — "}after <strong>{a.delay_days} days</strong>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-2 pt-1">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          className="flex-1 rounded-xl h-9"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={() =>
+            onSave({
+              name,
+              service_type: service,
+              trigger_type: "record_created",
+              conditions: { service_type: service },
+              actions,
+              enabled: true,
+            })
+          }
+          disabled={saving || !isValid}
+          className="flex-1 rounded-xl h-9 bg-indigo-600 hover:bg-indigo-700 shadow-md"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          {initial ? "Save Changes" : "Create Rule"}
+        </Button>
+      </div>
+    </div>
+  );
 }
+
+/* ─────────────────────────────────────────────
+   RULE CARD  (updated to show multi-actions)
+───────────────────────────────────────────── */
 
 function RuleCard({
   rule,
   onToggle,
   onDelete,
+  onEdit,
   deleting,
   toggling,
 }: {
   rule: AutomationRule;
   onToggle: (rule: AutomationRule) => void;
   onDelete: (id: number) => void;
+  onEdit: (rule: AutomationRule) => void;
   deleting: number | null;
   toggling: number | null;
 }) {
@@ -148,11 +533,10 @@ function RuleCard({
           : "border-border/40 bg-muted/30 opacity-60",
       )}
     >
-      {/* Status dot */}
-      <div className="flex-shrink-0 mt-0.5">
+      <div className="flex-shrink-0 mt-1">
         <div
           className={cn(
-            "w-2 h-2 rounded-full mt-1 transition-colors",
+            "w-2 h-2 rounded-full transition-colors",
             rule.enabled
               ? "bg-emerald-500 shadow-sm shadow-emerald-500/50"
               : "bg-muted-foreground/30",
@@ -160,52 +544,75 @@ function RuleCard({
         />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 space-y-3">
-        {/* Top row: service + arrow + action */}
+      <div className="flex-1 min-w-0 space-y-2.5">
+        {/* Title + service */}
         <div className="flex items-center gap-2 flex-wrap">
-          <ServicePill type={rule.service_type} />
-          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          <div className="flex items-center gap-1.5 text-sm font-medium">
-            <ActionIcon action={rule.action} />
-            <span className="truncate">{rule.action}</span>
-          </div>
+          <span className="font-bold text-sm">{rule.name}</span>
+          <span
+            className={cn(
+              "inline-block rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
+              SERVICE_COLORS[rule.conditions.service_type],
+            )}
+          >
+            {rule.conditions.service_type}
+          </span>
         </div>
 
-        {/* Bottom row: delay + stats */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>
-              Triggers <strong>{rule.delay_days} days</strong> after record
-              creation
-            </span>
-          </div>
-          {rule.trigger_count !== undefined && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Zap className="h-3 w-3" />
-              <span>
-                Triggered <strong>{rule.trigger_count}×</strong>
-              </span>
-            </div>
-          )}
-          {rule.created_at && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>
-                Created{" "}
-                {new Date(rule.created_at).toLocaleDateString(undefined, {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-          )}
+        {/* Actions list */}
+        <div className="space-y-1">
+          {rule.actions.map((action, i) => {
+            const def = ACTION_DEFINITIONS.find((d) => d.type === action.type);
+            if (!def) return null;
+            const Icon = def.icon;
+            return (
+              <div
+                key={i}
+                className="flex items-center gap-2 text-xs text-muted-foreground"
+              >
+                <ArrowRight className="h-3 w-3 opacity-40 flex-shrink-0" />
+                <Icon className={cn("h-3.5 w-3.5", def.color)} />
+                <span>{def.label}</span>
+                {action.template_id && (
+                  <span className="text-[10px] bg-muted rounded px-1.5 py-0.5 font-mono">
+                    template #{action.template_id}
+                  </span>
+                )}
+                <Clock className="h-3 w-3 ml-1 opacity-40" />
+                <span>{action.delay_days}d</span>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Meta */}
+        {rule.created_at && (
+          <p className="text-[10px] text-muted-foreground">
+            Created{" "}
+            {new Date(rule.created_at).toLocaleDateString(undefined, {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+            {rule.trigger_count !== undefined && (
+              <>
+                {" "}
+                · Triggered <strong>{rule.trigger_count}×</strong>
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Controls */}
       <div className="flex items-center gap-2 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => onEdit(rule)}
+        >
+          Edit
+        </Button>
         {toggling === rule.id ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : (
@@ -234,150 +641,6 @@ function RuleCard({
 }
 
 /* ─────────────────────────────────────────────
-   AUTOMATION FORM
-───────────────────────────────────────────── */
-
-function AutomationForm({
-  onSave,
-  onClose,
-  saving,
-}: {
-  onSave: (
-    data: Omit<AutomationRule, "id" | "created_at" | "trigger_count">,
-  ) => void;
-  onClose: () => void;
-  saving: boolean;
-}) {
-  const [service, setService] = React.useState<ServiceType>("GST");
-  const [delayDays, setDelayDays] = React.useState<number>(7);
-  const [actionType, setActionType] = React.useState<ActionType | string>(
-    "Send WhatsApp Reminder",
-  );
-  const [customAction, setCustomAction] = React.useState("");
-
-  const isCustom = actionType === "Custom";
-  const finalAction = isCustom ? customAction : actionType;
-  const isValid = finalAction.trim() && delayDays > 0;
-
-  return (
-    <div className="space-y-5 py-2">
-      {/* Service type */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Service Type
-        </label>
-        <Select
-          value={service}
-          onValueChange={(v) => setService(v as ServiceType)}
-        >
-          <SelectTrigger className="rounded-xl h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SERVICE_TYPES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Action */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Action
-        </label>
-        <Select value={actionType} onValueChange={setActionType}>
-          <SelectTrigger className="rounded-xl h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ACTION_TYPES.map((a) => (
-              <SelectItem key={a} value={a}>
-                <span className="flex items-center gap-2">
-                  <ActionIcon action={a} />
-                  {a}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isCustom && (
-          <Input
-            value={customAction}
-            onChange={(e) => setCustomAction(e.target.value)}
-            placeholder="Describe your custom action…"
-            className="rounded-xl h-9 mt-2"
-          />
-        )}
-      </div>
-
-      {/* Delay days */}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-          <span>Trigger After</span>
-          <span className="text-indigo-600 font-bold text-sm">
-            {delayDays} days
-          </span>
-        </label>
-        <input
-          type="range"
-          min={1}
-          max={365}
-          value={delayDays}
-          onChange={(e) => setDelayDays(Number(e.target.value))}
-          className="w-full accent-indigo-600"
-        />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>1 day</span>
-          <span>365 days</span>
-        </div>
-
-        {/* Preview */}
-        <div className="rounded-xl border border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 p-3 flex items-center gap-2.5">
-          <Zap className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-          <p className="text-[12px] text-indigo-700 dark:text-indigo-300">
-            When a <strong>{service}</strong> record is created,{" "}
-            <strong>"{finalAction || "your action"}"</strong> will fire after{" "}
-            <strong>{delayDays} days</strong>.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex gap-2 pt-1">
-        <Button
-          variant="outline"
-          onClick={onClose}
-          className="flex-1 rounded-xl h-9"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={() =>
-            onSave({
-              service_type: service,
-              delay_days: delayDays,
-              action: finalAction,
-              enabled: true,
-            })
-          }
-          disabled={saving || !isValid}
-          className="flex-1 rounded-xl h-9 bg-indigo-600 hover:bg-indigo-700 shadow-md"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Plus className="h-4 w-4 mr-2" />
-          )}
-          Create Rule
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────── */
 
@@ -390,9 +653,11 @@ export default function AutomationPage() {
   const [deleting, setDeleting] = React.useState<number | null>(null);
   const [toggling, setToggling] = React.useState<number | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [editingRule, setEditingRule] = React.useState<AutomationRule | null>(
+    null,
+  );
   const [filterService, setFilterService] = React.useState<string>("all");
 
-  /* ── FETCH ── */
   const fetchRules = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -410,7 +675,6 @@ export default function AutomationPage() {
     fetchRules();
   }, [fetchRules]);
 
-  /* ── CREATE ── */
   const handleCreate = async (
     data: Omit<AutomationRule, "id" | "created_at" | "trigger_count">,
   ) => {
@@ -427,7 +691,23 @@ export default function AutomationPage() {
     }
   };
 
-  /* ── DELETE ── */
+  const handleUpdate = async (
+    data: Omit<AutomationRule, "id" | "created_at" | "trigger_count">,
+  ) => {
+    if (!editingRule) return;
+    setSaving(true);
+    try {
+      await api.put(`/api/v1/automation/${editingRule.id}`, data);
+      toast({ title: "Rule updated" });
+      setEditingRule(null);
+      fetchRules();
+    } catch {
+      toast({ title: "Error updating rule", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     setDeleting(id);
     try {
@@ -441,15 +721,15 @@ export default function AutomationPage() {
     }
   };
 
-  /* ── TOGGLE ── */
   const handleToggle = async (rule: AutomationRule) => {
     setToggling(rule.id);
     const updated = { ...rule, enabled: !rule.enabled };
     setRules((prev) => prev.map((r) => (r.id === rule.id ? updated : r)));
     try {
-      await api.patch(`/api/v1/automation/${rule.id}`, updated);
+      await api.put(`/api/v1/automation/${rule.id}`, {
+        enabled: updated.enabled,
+      });
     } catch {
-      // revert on failure
       setRules((prev) => prev.map((r) => (r.id === rule.id ? rule : r)));
       toast({ title: "Failed to update rule", variant: "destructive" });
     } finally {
@@ -457,12 +737,11 @@ export default function AutomationPage() {
     }
   };
 
-  /* ── DERIVED ── */
   const filtered = React.useMemo(
     () =>
       filterService === "all"
         ? rules
-        : rules.filter((r) => r.service_type === filterService),
+        : rules.filter((r) => r.conditions?.service_type === filterService),
     [rules, filterService],
   );
 
@@ -475,13 +754,12 @@ export default function AutomationPage() {
     [rules],
   );
 
-  /* ─────────────────── RENDER ─── */
   return (
     <div
       className="max-w-[900px] mx-auto px-6 py-8 space-y-6"
       data-testid="page-automation"
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">
@@ -494,17 +772,17 @@ export default function AutomationPage() {
             Automation Rules
           </h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Trigger WhatsApp reminders, emails, and actions automatically.
+            Multi-action automation. Each rule can trigger WhatsApp, email, and
+            more — independently timed.
           </p>
         </div>
-
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md h-9">
               <Plus className="h-4 w-4" /> New Rule
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Create Automation Rule</DialogTitle>
             </DialogHeader>
@@ -517,7 +795,7 @@ export default function AutomationPage() {
         </Dialog>
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
           {
@@ -556,23 +834,23 @@ export default function AutomationPage() {
         ))}
       </div>
 
-      {/* ── How it works banner ── */}
+      {/* Info banner */}
       <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-950/30 px-5 py-4">
         <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
-          How Automation Works
+          How Multi-Action Automation Works
         </p>
         <div className="flex items-center gap-2 flex-wrap text-xs text-indigo-700 dark:text-indigo-300">
           <span className="font-medium">Record Created</span>
           <ArrowRight className="h-3 w-3 opacity-60" />
-          <span className="font-medium">Wait N days</span>
+          <span className="font-medium">Match Rule Conditions</span>
           <ArrowRight className="h-3 w-3 opacity-60" />
-          <span className="font-medium">Trigger Action</span>
+          <span className="font-medium">Schedule Each Action</span>
           <ArrowRight className="h-3 w-3 opacity-60" />
-          <span className="font-medium">Client Notified ✅</span>
+          <span className="font-medium">Worker Executes ✅</span>
         </div>
       </div>
 
-      {/* ── Filter bar ── */}
+      {/* Filter */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={filterService} onValueChange={setFilterService}>
           <SelectTrigger className="w-[150px] h-9 rounded-xl text-sm">
@@ -591,7 +869,7 @@ export default function AutomationPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 rounded-xl text-xs text-muted-foreground"
+            className="h-9 rounded-xl text-xs"
             onClick={() => setFilterService("all")}
           >
             Clear
@@ -602,7 +880,7 @@ export default function AutomationPage() {
         </span>
       </div>
 
-      {/* ── Rules List ── */}
+      {/* Rules list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -621,7 +899,7 @@ export default function AutomationPage() {
             <p className="text-xs text-muted-foreground/60 mt-1">
               {rules.length === 0
                 ? "Create your first rule to start automating"
-                : "Try selecting a different service filter"}
+                : "Try a different filter"}
             </p>
           </div>
           {rules.length === 0 && (
@@ -642,6 +920,7 @@ export default function AutomationPage() {
               rule={rule}
               onToggle={handleToggle}
               onDelete={handleDelete}
+              onEdit={setEditingRule}
               deleting={deleting}
               toggling={toggling}
             />
@@ -649,7 +928,26 @@ export default function AutomationPage() {
         </div>
       )}
 
-      {/* ── Footer tip ── */}
+      {/* Edit dialog */}
+      {editingRule && (
+        <Dialog
+          open={!!editingRule}
+          onOpenChange={(v) => !v && setEditingRule(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Rule</DialogTitle>
+            </DialogHeader>
+            <AutomationForm
+              initial={editingRule}
+              onSave={handleUpdate}
+              onClose={() => setEditingRule(null)}
+              saving={saving}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {!loading && rules.length > 0 && (
         <p className="text-[11px] text-muted-foreground text-center pt-2">
           Toggle the switch to pause/resume any rule without deleting it.
