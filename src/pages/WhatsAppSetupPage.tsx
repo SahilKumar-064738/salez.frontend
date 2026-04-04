@@ -333,8 +333,8 @@ export default function WhatsAppSetupPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center rise-in">
         <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-3xl mx-auto mb-5">✅</div>
-        <h2 className="text-2xl font-bold mb-2">Your automation is ready!</h2>
-        <p className="text-muted-foreground mb-6 text-sm max-w-sm mx-auto">We've received your business profile. Your WhatsApp automation will be live within 24 hours. We'll message you on WhatsApp to confirm.</p>
+        <h2 className="text-2xl font-bold mb-2">Your workflow is ready!</h2>
+        <p className="text-muted-foreground mb-6 text-sm max-w-sm mx-auto">We've received your business profile. Your WhatsApp workflow will be live within 24 hours. We'll message you on WhatsApp to confirm.</p>
         <div className="flex gap-3 justify-center flex-wrap mb-6">
           <Button variant="outline" className="rounded-xl" onClick={() => setSubmitted(false)}>← Set Up Another</Button>
         </div>
@@ -363,10 +363,10 @@ export default function WhatsAppSetupPage() {
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full border border-primary/20 mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          Business Automation Setup
+          Business Workflow Setup
         </div>
         <h1 className="text-2xl font-bold">Set Up Your Business Profile</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Works for any industry · Takes about 5 minutes · Your data personalises every automated message.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Works for any industry · Takes about 5 minutes · Your data personalises every message.</p>
       </div>
 
       {/* 2-col layout: form left, preview right on large screens */}
@@ -413,7 +413,7 @@ export default function WhatsAppSetupPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-base font-semibold">Business Identity</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Basic information about your business. This appears in every automated client message.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Basic information about your business. This appears in every client message.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Business / Brand Name *">
@@ -468,7 +468,7 @@ export default function WhatsAppSetupPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-base font-semibold">Location & Office Hours</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Where clients find you — shared in appointment confirmations and automated messages.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Where clients find you — shared in appointment confirmations and messages.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Primary Address *" full>
@@ -507,7 +507,7 @@ export default function WhatsAppSetupPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-base font-semibold">Contact Details</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">All contact points that will be shared with clients in automated replies.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">All contact points that will be shared with clients in replies.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Primary Phone *">
@@ -666,7 +666,7 @@ export default function WhatsAppSetupPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-base font-semibold">Documents / Information Required</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">What do clients need to provide to get started? Used in automated WhatsApp checklists.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">What do clients need to provide to get started? Used in WhatsApp checklists.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {DOC_OPTIONS.map(d => (
@@ -757,7 +757,7 @@ export default function WhatsAppSetupPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-base font-semibold">Review & Submit</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Check your details before we set up your WhatsApp automation.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Check your details before we set up your WhatsApp workflow.</p>
               </div>
 
               {/* Summary cards */}

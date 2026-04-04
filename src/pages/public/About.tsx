@@ -10,11 +10,11 @@ export default function About() {
             <MessageCircle className="h-10 w-10 text-white fill-current" />
           </div>
           <h1 className="text-4xl font-bold text-slate-900">About Salez.online</h1>
-          <p className="mt-3 text-slate-500 text-lg">We help small businesses grow through the power of WhatsApp automation.</p>
+          <p className="mt-3 text-slate-500 text-lg">We help small businesses grow through the power of WhatsApp messaging.</p>
         </div>
 
         <div className="space-y-5 text-slate-600 text-base leading-relaxed">
-          <p>Salez.online was founded with a simple idea: <strong className="text-slate-900">every business already uses WhatsApp</strong>. The challenge is turning those chats into a scalable, automated sales and CRM system.</p>
+          <p>Salez.online was founded with a simple idea: <strong className="text-slate-900">every business already uses WhatsApp</strong>. The challenge is turning those chats into a scalable, smart sales and CRM system.</p>
           <p>We built Salez.online as the most affordable, easiest-to-use WhatsApp CRM designed for clinics, coaching centres, salons, repair shops, and other local businesses that want to grow without hiring a large team.</p>
         </div>
 

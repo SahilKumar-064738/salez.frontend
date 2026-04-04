@@ -7,7 +7,7 @@ export type { Template };
 export function useTemplates(_filters?: { search?: string; status?: string }) {
   return useQuery({
     queryKey: ["templates"],
-    queryFn: () => templatesService.list(),
+    queryFn: () => templatesService.list(_filters),
   });
 }
 

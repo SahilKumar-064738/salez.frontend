@@ -219,7 +219,7 @@ const configs: Record<string, Config> = {
   clinics: {
     title: "Clinics & Healthcare", emoji: "🏥",
     hero: "Never miss a patient again",
-    desc: "Automate appointment reminders, follow-ups, and health tips for your clinic on WhatsApp.",
+    desc: "Schedule appointment reminders, follow-ups, and health tips for your clinic on WhatsApp.",
     useCases: ["Appointment confirmations & reminders", "Prescription ready notifications", "Post-visit follow-ups", "Lab report delivery", "No-show reduction by 60%", "Health tips broadcasts"],
     templates: [
       { name: "Appointment Reminder", preview: "Hello Priya! Your appointment with Dr. Mehta is confirmed for Thursday at 11:00 AM. Reply 1 to confirm or 2 to reschedule. 🏥" },
@@ -230,7 +230,7 @@ const configs: Record<string, Config> = {
   coaching: {
     title: "Coaching Centres", emoji: "🎓",
     hero: "Fill every batch, every time",
-    desc: "Convert leads, send class schedules, and keep students engaged through WhatsApp automation.",
+    desc: "Convert leads, send class schedules, and keep students engaged through WhatsApp messaging.",
     useCases: ["Lead follow-up sequences", "Class schedule & Zoom link updates", "Fee payment reminders", "Result announcements", "Batch enrollment broadcasts", "Free demo class invites"],
     templates: [
       { name: "Batch Enrollment", preview: "Hi Rahul! Our UPSC Foundation Batch starts 15 Apr — only 8 seats left! Includes study material, mock tests & mentorship. Reply JOIN to enroll. 🎓" },
@@ -275,7 +275,7 @@ const configs: Record<string, Config> = {
     title: "E-Commerce Stores", emoji: "🛍️",
     hero: "Turn browsers into buyers, automatically",
     desc: "Recover abandoned carts, send order updates, and run flash sales directly on WhatsApp.",
-    useCases: ["Abandoned cart recovery", "Order confirmation & tracking", "Delivery status updates", "Flash sale broadcasts", "Return & refund automation", "Review collection after delivery"],
+    useCases: ["Abandoned cart recovery", "Order confirmation & tracking", "Delivery status updates", "Flash sale broadcasts", "Return & refund workflow", "Review collection after delivery"],
     templates: [
       { name: "Abandoned Cart", preview: "Hey Sneha! 👋 You left 2 items in your cart. Your Floral Kurti (Size M) is still waiting! Tap to complete your order: stylecart.in/cart 🛒 Use code SAVE10 for 10% off!" },
       { name: "Order Shipped", preview: "📦 Your order #SC-8821 is on its way! Expected delivery: Tomorrow by 8 PM. Track live: stylecart.in/track/8821. Any questions? Just reply here!" },
@@ -295,7 +295,7 @@ const configs: Record<string, Config> = {
   },
   ca: {
     title: "Chartered Accountants", emoji: "📊",
-    hero: "Automate compliance, delight clients",
+    hero: "Streamline compliance, delight clients",
     desc: "Send tax reminders, collect documents, book appointments, and follow up on pending filings automatically.",
     useCases: ["ITR filing reminders", "GST return due date alerts", "Document collection requests", "Appointment booking & reminders", "Follow-up on pending submissions", "Advance tax payment reminders"],
     templates: [
@@ -372,7 +372,7 @@ export default function TemplateLanding({ industry }: { industry: string }) {
 
         {/* CTA */}
         <div className="bg-green-50 border border-green-100 rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Ready to automate your {c.title.toLowerCase()}?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Ready to streamline your {c.title.toLowerCase()}?</h2>
           <p className="text-slate-500 mb-6">Set up in 10 minutes. No technical skills needed.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/auth/signup" className="bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors">Start free trial</Link>

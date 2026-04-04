@@ -837,7 +837,7 @@ export default function AutomationPage() {
         JSON.stringify(payload, null, 2),
       );
       await createMutation.mutateAsync(payload);
-      toast({ title: "Automation rule created 🚀" });
+      toast({ title: "Workflow rule created 🚀" });
       setCreateOpen(false);
     } catch (err: any) {
       console.error("[AutomationPage] CREATE ERROR:", err?.message ?? err);
@@ -938,10 +938,10 @@ export default function AutomationPage() {
             <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
               <Zap className="h-4 w-4" />
             </span>
-            Automation Rules
+            Workflow Rules
           </h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Multi-action automation. Each rule can trigger WhatsApp, email, and
+            Multi-action workflow. Each rule can trigger WhatsApp, email, and
             more — independently timed.
           </p>
         </div>
@@ -967,7 +967,7 @@ export default function AutomationPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Automation Rule</DialogTitle>
+                <DialogTitle>Create Workflow Rule</DialogTitle>
               </DialogHeader>
               <AutomationForm
                 onSave={handleCreate}
@@ -1035,7 +1035,7 @@ export default function AutomationPage() {
       {/* Info banner */}
       <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-gradient-to-r from-indigo-50/80 to-blue-50/40 dark:from-indigo-950/40 dark:to-blue-950/20 px-5 py-4">
         <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
-          How Multi-Action Automation Works
+          How Multi-Action Workflows Work
         </p>
         <div className="flex items-center gap-2 flex-wrap text-xs text-indigo-700 dark:text-indigo-300">
           {[
@@ -1120,12 +1120,12 @@ export default function AutomationPage() {
           <div className="text-center">
             <p className="text-sm font-semibold text-muted-foreground">
               {rules.length === 0
-                ? "No automation rules yet"
+                ? "No workflow rules yet"
                 : "No rules match your filters"}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {rules.length === 0
-                ? "Create your first rule to start automating reminders"
+                ? "Create your first rule to start sending scheduled reminders"
                 : "Try adjusting the search or filter"}
             </p>
           </div>

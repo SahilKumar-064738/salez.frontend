@@ -1,8 +1,3 @@
-/**
- * src/services/templatesService.ts — REFACTORED
- * Delegates to typed Axios api client in @/api/api.
- * Templates are under /campaigns/templates on the backend.
- */
 import { api } from '@/api/api';
 import type { CreateTemplatePayload } from '@/api/api';
 
@@ -24,7 +19,7 @@ function normalize(t: any): Template {
     content: t.content ?? '',
     variables: Array.isArray(t.variables) ? t.variables : [],
     category: t.category ?? null,
-    status: t.status ?? null,
+    status: (t.status ?? t.template_status ?? '').toLowerCase() || null,
     rejectionReason: t.rejectionReason ?? t.rejection_reason ?? null,
     created_at: t.created_at,
   };
@@ -32,12 +27,40 @@ function normalize(t: any): Template {
 
 export const templatesService = {
   async list(): Promise<Template[]> {
-    const raw = await api.campaigns.listTemplates();
-    return (Array.isArray(raw) ? raw : []).map(normalize);
+    try {
+      const raw = await api.campaigns.listTemplates();
+
+      // 🔥 HANDLE DIFFERENT RESPONSE SHAPES
+      const data = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.data)
+        ? raw.data
+        : [];
+
+      console.log("RAW API RESPONSE:", raw);
+      console.log("PARSED DATA:", data);
+
+      const normalized = data.map(normalize);
+
+      console.log("NORMALIZED:", normalized);
+
+      // ✅ SAFE FILTER (won’t break everything)
+      const approved = normalized.filter(
+        (t) => t.status?.toLowerCase() === "approved"
+      );
+
+      console.log("APPROVED:", approved);
+
+      // 🔥 IMPORTANT: fallback if filter fails
+      return approved.length > 0 ? approved : normalized;
+
+    } catch (error: any) {
+      console.error("TEMPLATES FETCH ERROR:", error?.response || error);
+      return [];
+    }
   },
 
   async get(id: number): Promise<Template> {
-    // No direct api.campaigns.getTemplate — use apiGet shim
     const { apiGet } = await import('@/lib/apiClient');
     const raw = await apiGet<any>(`/campaigns/templates/${id}`);
     return normalize(raw?.data ?? raw);
@@ -55,6 +78,7 @@ export const templatesService = {
       variables: data.variables ?? [],
       category: data.category ?? 'marketing',
     };
+
     const raw = await api.campaigns.createTemplate(payload);
     return normalize(raw);
   },

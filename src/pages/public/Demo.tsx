@@ -4,9 +4,9 @@ export default function Demo() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 flex flex-col items-center">
       <div className="container mx-auto px-4 text-center mb-12">
-        <h1 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6">Experience the Automation</h1>
+        <h1 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6">Experience the Workflow</h1>
         <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-          See how our bot handles a typical customer interaction. Watch the sequence below.
+          See how our assistant handles a typical customer interaction. Watch the sequence below.
         </p>
       </div>
       
@@ -21,7 +21,7 @@ export default function Demo() {
             <li>Customer (You) sent an inquiry.</li>
             <li>System waited 2 minutes (simulated) then sent a brochure.</li>
             <li>System waited 24 hours (simulated) then sent a follow-up.</li>
-            <li>When you clicked Reply, automation stopped immediately to let a human take over.</li>
+            <li>When you clicked Reply, the workflow paused immediately to let a human take over.</li>
           </ol>
         </div>
       </div>

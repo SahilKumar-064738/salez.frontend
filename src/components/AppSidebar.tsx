@@ -42,14 +42,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
-// REMOVED: /billing and /automation (automation not in API contract)
+// REMOVED: /billing and /automation (workflows not in API contract)
 const nav = [
   { href: "/inbox", label: "Inbox", icon: MessageSquareText },
   { href: "/contacts", label: "Contacts", icon: Users2 },
   { href: "/pipeline", label: "Pipeline", icon: LayoutGrid },
   { href: "/broadcast", label: "Broadcast", icon: Send },
   { href: "/templates", label: "Templates", icon: NotebookText },
-  { href: "/automation", label: "Automation", icon: Zap },
+  { href: "/automation", label: "Workflows", icon: Zap },
   { href: "/records", label: "Records", icon: FileText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/whatsapp-setup", label: "WA Setup", icon: MessagesSquare },

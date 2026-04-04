@@ -6,7 +6,7 @@
  *
  * Also provides a legacy `api` compat shim with .get/.post/.put/.patch/.delete
  * methods for pages that use the old pattern directly (AppSidebar, RecordsPage,
- * AutomationPage). These delegate to the same Axios client so all requests share
+ * WorkflowPage). These delegate to the same Axios client so all requests share
  * token injection and refresh logic.
  */
 

@@ -14,11 +14,11 @@ const plans = [
     price: 1999,
     originalPrice: 4000,
     popular: true,
-    desc: "Everything you need to automate WhatsApp and convert more leads.",
+    desc: "Everything you need to manage WhatsApp and convert more leads.",
     cta: "Start Automating WhatsApp",
     features: [
       { text: "Up to 2,000 contacts", ok: true },
-      { text: "Unlimited auto-reply rules", ok: true },
+      { text: "Unlimited smart reply rules", ok: true },
       { text: "Broadcast campaigns (5,000 msgs/mo)", ok: true },
       { text: "Full analytics dashboard", ok: true },
       { text: "CSV upload & campaign tracking", ok: true },
@@ -57,7 +57,7 @@ const plans = [
 
 const comparison = [
   { feature: "Contacts", starter: "2,000", pro: "Unlimited" },
-  { feature: "Auto-reply rules", starter: "Unlimited", pro: "Unlimited" },
+  { feature: "Smart reply rules", starter: "Unlimited", pro: "Unlimited" },
   { feature: "Monthly broadcast messages", starter: "5,000", pro: "Unlimited" },
   { feature: "User accounts", starter: "5", pro: "Unlimited" },
   { feature: "Analytics", starter: "✅ Full", pro: "✅ Advanced + Export" },

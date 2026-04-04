@@ -18,16 +18,16 @@ const stats = [
   { value: "3–5 hrs", label: "Saved daily per business" },
   { value: "< 1 min", label: "Average first response time" },
   { value: "20–40%", label: "Typical conversion increase" },
-  { value: "24/7", label: "Automated availability" },
+  { value: "24/7", label: "Always-on availability" },
 ];
 
 const features = [
-  { icon: Bot, title: "Auto Replies", desc: "Keyword triggers, FAQ bots, lead capture — your business responds instantly, even at 2 AM." },
-  { icon: Megaphone, title: "Broadcast Campaigns", desc: "Send bulk messages to your full contact list with CSV upload, scheduling, and delivery tracking." },
-  { icon: Zap, title: "Workflow Builder", desc: "Visual automation flows. 'If no reply in 24h → send follow-up.' Drag, drop, done." },
+  { icon: Bot, title: "Smart Replies", desc: "Keyword triggers, FAQ responses, lead capture — your business responds instantly, even at 2 AM." },
+  { icon: Megaphone, title: "Broadcast Campaigns", desc: "Send broadcast messages to your full contact list with CSV upload, scheduling, and delivery tracking." },
+  { icon: Zap, title: "Workflow Builder", desc: "Visual workflow flows. 'If no reply in 24h → send follow-up.' Drag, drop, done." },
   { icon: LineChart, title: "Analytics Dashboard", desc: "Open rates, response rates, conversion metrics — see exactly what's working." },
-  { icon: Users, title: "Unified Inbox", desc: "All WhatsApp conversations in one place. One-click handoff from bot to human." },
-  { icon: Shield, title: "Auto-Stop on Reply", desc: "Bot stops the moment a customer responds. You take over seamlessly, every time." },
+  { icon: Users, title: "Unified Inbox", desc: "All WhatsApp conversations in one place. One-click handoff from assistant to human." },
+  { icon: Shield, title: "Smart-Stop on Reply", desc: "Messaging pauses the moment a customer responds. You take over seamlessly, every time." },
 ];
 
 const templates = [
@@ -42,7 +42,7 @@ const faqs = [
   { q: "Is bulk messaging allowed by WhatsApp?", a: "Yes. We only use official, WhatsApp-approved API methods. No grey-area tools, no risk of account ban." },
   { q: "What industries is this best for?", a: "Any business that manages leads or repeat customers via WhatsApp: e-commerce, real estate, coaching, clinics, CA firms, salons, repair shops, and more." },
   { q: "Can I cancel anytime?", a: "Yes. No long-term contracts. Cancel from your billing page at any time — effective at the end of your billing period." },
-  { q: "How is Salez.online different from just using WhatsApp Business App?", a: "WhatsApp Business App is manual — you reply yourself. Salez.online adds automation, broadcast campaigns, analytics, and a unified inbox so your business can scale without adding headcount." },
+  { q: "How is Salez.online different from just using WhatsApp Business App?", a: "WhatsApp Business App is manual — you reply yourself. Salez.online adds smart workflows, broadcast campaigns, analytics, and a unified inbox so your business can scale without adding headcount." },
 ];
 
 export default function Landing() {
@@ -61,12 +61,12 @@ export default function Landing() {
             <motion.div initial="hidden" animate="show" variants={stagger} className="lg:w-1/2 space-y-7">
               <motion.div variants={fadeUp}>
                 <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full border border-green-200">
-                  <Zap className="h-3.5 w-3.5" /> WhatsApp and Call Automation for Indian Businesses
+                  <Zap className="h-3.5 w-3.5" /> WhatsApp and Call Workflows for Indian Businesses
                 </span>
               </motion.div>
 
               <motion.h1 variants={fadeUp} className="text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.08]">
-                Automate your{" "}
+                Streamline your{" "}
                 <br />
                 <span className="text-primary">Business</span>{" "}
                 and{" "}
@@ -153,13 +153,13 @@ export default function Landing() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Real impact, from day one</h2>
-            <p className="text-slate-500 text-lg">Here's what changes when you automate your WhatsApp.</p>
+            <p className="text-slate-500 text-lg">Here's what changes when you upgrade your WhatsApp.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-10">
             {[
-              { icon: Clock, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", stat: "3–5 hrs", label: "saved every day", title: "Reclaim your time", desc: "Stop manually copy-pasting messages. Automate replies, reminders, and follow-ups across every customer — without lifting a finger.", bullets: ["Auto-reply to common queries instantly", "Scheduled follow-ups run themselves", "Bulk broadcasts take 2 minutes, not 2 hours"] },
-              { icon: TrendingUp, color: "from-green-500 to-green-600", bg: "bg-green-50", stat: "20–40%", label: "more conversions", title: "Grow revenue faster", desc: "Speed wins deals. Instant replies mean more leads convert before they cool down. Organised follow-ups mean nothing slips through.", bullets: ["First response in under 60 seconds", "Automated sequences nurture leads 24/7", "Organised pipeline = no lost opportunities"] },
+              { icon: Clock, color: "from-blue-500 to-blue-600", bg: "bg-blue-50", stat: "3–5 hrs", label: "saved every day", title: "Reclaim your time", desc: "Stop manually copy-pasting messages. Schedule replies, reminders, and follow-ups across every customer — without lifting a finger.", bullets: ["Smart replies to common queries instantly", "Scheduled follow-ups run themselves", "Broadcast campaigns take 2 minutes, not 2 hours"] },
+              { icon: TrendingUp, color: "from-green-500 to-green-600", bg: "bg-green-50", stat: "20–40%", label: "more conversions", title: "Grow revenue faster", desc: "Speed wins deals. Instant replies mean more leads convert before they cool down. Organised follow-ups mean nothing slips through.", bullets: ["First response in under 60 seconds", "Smart sequences nurture leads 24/7", "Organised pipeline = no lost opportunities"] },
             ].map((v, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-shadow overflow-hidden p-8">
                 <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${v.color}`} />
@@ -251,7 +251,7 @@ export default function Landing() {
               <span className="line-through text-slate-400 text-2xl">₹4000</span>{" "}
               <span className="text-primary">₹1999/month</span>
             </h2>
-            <p className="text-slate-500 text-lg mb-8">Full automation. Broadcast. Analytics. No hidden fees.</p>
+            <p className="text-slate-500 text-lg mb-8">Full workflow suite. Broadcast. Analytics. No hidden fees.</p>
             <Link href="/pricing">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold text-base px-10 py-6 rounded-xl shadow-xl shadow-primary/25">
                 See All Plans <ArrowRight className="ml-2 h-5 w-5" />

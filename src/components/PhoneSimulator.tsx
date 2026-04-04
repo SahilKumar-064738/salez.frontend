@@ -29,7 +29,7 @@ export function PhoneSimulator() {
       } else if (step === 1) {
         // Wait then show typing
         timeout = setTimeout(() => setIsTyping(true), 1500);
-        // Send auto reply
+        // Send smart reply
         timeout = setTimeout(() => {
           setIsTyping(false);
           setMessages(prev => [
@@ -63,7 +63,7 @@ export function PhoneSimulator() {
     setTimeout(() => {
       setMessages(prev => [
         ...prev,
-        { id: 5, text: "Great! Automation stopped. A human agent will take over now.", sender: "system", timestamp: "Now" }
+        { id: 5, text: "Great! Workflow paused. A human agent will take over now.", sender: "system", timestamp: "Now" }
       ]);
     }, 1000);
     setStep(4); // End
