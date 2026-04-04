@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const formSchema = z
   .object({
@@ -48,15 +48,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await fetch(apiUrl("/api/v1/auth/reset-password"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password: values.password }),
-      });
-
-      const text = await res.text();
-      let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+      const data: any = await api.post("/api/v1/auth/reset-password", { token, password: values.password });
 
       if (!res.ok) {
         throw new Error(data?.message || data?.error || "Reset failed. Your link may have expired.");

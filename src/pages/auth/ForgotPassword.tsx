@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { MessageCircle, ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const formSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -27,20 +27,7 @@ export default function ForgotPassword() {
   async function onSubmit(values: FormValues) {
     setServerError(null);
     try {
-      const res = await fetch(apiUrl("/api/v1/auth/forgot-password"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: values.email }),
-      });
-
-      const text = await res.text();
-      let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch { data = null; }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || "Request failed. Please try again.");
-      }
-
+      await api.post("/api/v1/auth/forgot-password", { email: values.email });
       setIsSuccess(true);
     } catch (err: any) {
       setServerError(err.message || "Something went wrong. Please try again.");

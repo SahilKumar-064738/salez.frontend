@@ -1,124 +1,59 @@
 /**
- * src/lib/api.ts — PATCHED
+ * src/lib/api.ts — REFACTORED
  *
- * WHAT CHANGED vs existing:
- *   1. apiFetch now reads the JWT from localStorage and attaches it as
- *      Authorization: Bearer <token> on every request.
- *      The JWT is what the backend authMiddleware validates; the tenantId
- *      is extracted from the user profile associated with that JWT.
- *      No explicit X-Tenant-ID header is needed — tenant is resolved server-side.
+ * Re-exports the new typed api namespace from @/api/api for consumers
+ * that import { api } from '@/api/api'.
  *
- *   2. 401 responses auto-clear the stored token so the user is redirected
- *      to login rather than getting a stuck state.
- *
- *   3. API_BASE_URL is read from import.meta.env.VITE_API_URL so it works
- *      both in development (localhost:4000) and production.
- *
- * The existing apiClient.ts (apiGet, apiPost, apiPatch, apiDelete) calls this
- * function and is UNCHANGED.
+ * Also provides a legacy `api` compat shim with .get/.post/.put/.patch/.delete
+ * methods for pages that use the old pattern directly (AppSidebar, RecordsPage,
+ * AutomationPage). These delegate to the same Axios client so all requests share
+ * token injection and refresh logic.
  */
 
+export { tokenStore, getApiError } from '@/api/api';
+export type {
+  ApiResponse,
+  PaginatedResponse,
+  ApiError,
+  AuthUser,
+  AuthTokens,
+  Contact,
+  ContactsQuery,
+} from '@/api/api';
+
+// Typed api namespace (auth, contacts, messages, etc.)
+export { api as typedApi } from '@/api/api';
+
+// Legacy helpers
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL ?? '';
 
-/**
- * Build a full URL from a path — used by auth.ts for raw fetch() calls
- * that need the absolute URL (not going through apiFetch).
- */
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
-const TOKEN_KEY = 'auth_token';
+// ── Legacy api object (.get / .post / .put / .patch / .delete) ────────────────
+// Backed by the same Axios client (via apiClient shim) so auth interceptors apply.
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/apiClient';
 
-function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = getStoredToken();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-
-  // Attach JWT — backend resolves tenantId from user profile
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const url = `${API_BASE_URL}${path}`;
-
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  // Auto-logout on 401
-  if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    // Trigger re-render by dispatching a storage event
-    window.dispatchEvent(new Event('storage'));
-  }
-
-  if (!res.ok) {
-    let errorMessage = `HTTP ${res.status}`;
-    try {
-      const body = await res.json();
-      errorMessage = body?.message ?? body?.error ?? errorMessage;
-    } catch {
-      // ignore parse errors
-    }
-    throw new Error(errorMessage);
-  }
-
-  // 204 No Content
-  if (res.status === 204) {
-    return undefined as unknown as T;
-  }
-
-  return res.json() as Promise<T>;
-}
-/**
- * `api` — convenience object used by pages that imported { api } from "@/lib/api".
- * Delegates to apiFetch, automatically prepending /api/v1 like apiClient does.
- */
-function v1(path: string): string {
-  if (path.startsWith('/api/v1')) return path;
-  if (path.startsWith('/api/')) return path.replace('/api/', '/api/v1/');
-  const clean = path.startsWith('/') ? path : `/${path}`;
-  return `/api/v1${clean}`;
+function stripV1(path: string): string {
+  // apiClient's v1() strips /api/v1 prefix internally — pass the path as-is
+  return path;
 }
 
 export const api = {
   get<T>(path: string, options?: RequestInit): Promise<T> {
-    return apiFetch<T>(v1(path), { method: 'GET', ...options });
+    return apiGet<T>(stripV1(path));
   },
   post<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return apiFetch<T>(v1(path), {
-      method: 'POST',
-      body: data !== undefined ? JSON.stringify(data) : undefined,
-      ...options,
-    });
+    return apiPost<T>(stripV1(path), data);
   },
   put<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return apiFetch<T>(v1(path), {
-      method: 'PUT',
-      body: data !== undefined ? JSON.stringify(data) : undefined,
-      ...options,
-    });
+    return apiPut<T>(stripV1(path), data);
   },
   patch<T>(path: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return apiFetch<T>(v1(path), {
-      method: 'PATCH',
-      body: data !== undefined ? JSON.stringify(data) : undefined,
-      ...options,
-    });
+    return apiPatch<T>(stripV1(path), data);
   },
   delete<T = void>(path: string, options?: RequestInit): Promise<T> {
-    return apiFetch<T>(v1(path), { method: 'DELETE', ...options });
+    return apiDelete<T>(stripV1(path));
   },
 };

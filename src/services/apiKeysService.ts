@@ -1,18 +1,13 @@
 /**
- * src/services/apiKeysService.ts
- *
- * Backend contract (all under /api/v1 — handled by apiClient):
- *   GET    /api-keys        list keys (never returns raw key)
- *   POST   /api-keys        generate new key (raw key shown ONCE in response)
- *   DELETE /api-keys/:id    revoke key (owner/admin only)
+ * src/services/apiKeysService.ts — REFACTORED
+ * Delegates to typed Axios api client in @/api/api.
  */
-
-import { apiGet, apiPost, apiDelete } from "@/lib/apiClient";
+import { api } from '@/api/api';
 
 export interface ApiKey {
   id: number;
   name: string;
-  keyPrefix: string;         // e.g. "sk_live_a3f2"
+  keyPrefix: string;
   scopes: string[];
   isActive: boolean;
   lastUsedAt?: string | null;
@@ -21,15 +16,15 @@ export interface ApiKey {
 }
 
 export interface NewApiKeyResponse extends ApiKey {
-  key: string;               // raw key — shown ONCE, never again
+  key: string;
   warning: string;
 }
 
 function normalize(k: any): ApiKey {
   return {
     id: Number(k.id),
-    name: k.name ?? "",
-    keyPrefix: k.keyPrefix ?? k.key_prefix ?? "",
+    name: k.name ?? '',
+    keyPrefix: k.keyPrefix ?? k.key_prefix ?? '',
     scopes: Array.isArray(k.scopes) ? k.scopes : [],
     isActive: Boolean(k.isActive ?? k.is_active ?? true),
     lastUsedAt: k.lastUsedAt ?? k.last_used_at ?? null,
@@ -40,34 +35,28 @@ function normalize(k: any): ApiKey {
 
 export const apiKeysService = {
   async list(): Promise<ApiKey[]> {
-    const raw = await apiGet<any>("/api-keys");
-    const list = raw?.data ?? raw ?? [];
-    return (Array.isArray(list) ? list : []).map(normalize);
+    const raw = await api.apiKeys.list();
+    return (Array.isArray(raw) ? raw : []).map(normalize);
   },
 
-  /**
-   * POST /api-keys
-   * Returns the raw key in the response — copy it now, it won't be shown again.
-   */
   async create(data: {
     name: string;
     scopes: string[];
     expiresAt?: string | null;
   }): Promise<NewApiKeyResponse> {
-    const raw = await apiPost<any>("/api-keys", {
+    const d = await api.apiKeys.create({
       name: data.name,
       scopes: data.scopes,
-      expiresAt: data.expiresAt ?? null,
+      expiresAt: data.expiresAt ?? undefined,
     });
-    const d = raw?.data ?? raw;
     return {
       ...normalize(d),
-      key: d?.key ?? "",
-      warning: d?.warning ?? "Copy this key now. It will never be shown again.",
+      key: (d as any).key ?? '',
+      warning: (d as any).warning ?? 'Copy this key now. It will never be shown again.',
     };
   },
 
   async revoke(id: number): Promise<void> {
-    await apiDelete(`/api-keys/${id}`);
+    await api.apiKeys.revoke(id);
   },
 };

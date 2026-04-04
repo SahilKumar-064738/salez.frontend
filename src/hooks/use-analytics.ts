@@ -1,47 +1,75 @@
-/**
- * src/hooks/use-analytics.ts — FINAL FIXED VERSION
- */
-
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/apiClient';
+import { api } from '@/api/api';
 
 export interface DateRange {
   from_date?: string;
   to_date?: string;
 }
 
-// ─────────────────────────────────────────────────────────
-// ✅ SUMMARY ANALYTICS (REQUIRED BY YOUR PAGE)
-// ─────────────────────────────────────────────────────────
-
 export function useAnalyticsSummary(range?: DateRange) {
-  const params: Record<string, string> = {};
-  if (range?.from_date) params.from_date = range.from_date;
-  if (range?.to_date) params.to_date = range.to_date;
-
   return useQuery({
     queryKey: ['analytics', 'summary', range],
     queryFn: async () => {
       try {
-        const [messagesRes, campaignsRes] = await Promise.all([
-          apiGet<{ data: any }>('/analytics/messages', { params }),
-          apiGet<{ data: any }>('/analytics/campaigns', { params }),
+        const params =
+          range?.from_date || range?.to_date
+            ? {
+                from_date: range?.from_date,
+                to_date: range?.to_date,
+              }
+            : undefined;
+
+        // ✅ Fetch analytics
+        const [m, c] = await Promise.all([
+          api.analytics.messages(params) as any,
+          api.analytics.campaigns(params) as any,
         ]);
 
-        const m = messagesRes.data.data || {};
-        const c = campaignsRes.data.data || {};
+        // ✅ Fetch ALL contacts (pagination)
+        let allContacts: any[] = [];
+        let cursor: string | undefined = undefined;
+
+        while (true) {
+          const res = await api.contacts.list({
+            cursor,
+            limit: 100,
+          });
+
+          const list = res?.data || [];
+
+          allContacts = [...allContacts, ...list];
+
+          if (!res?.hasMore) break;
+
+          cursor = res?.nextCursor || undefined;
+        }
+
+        // 🔥 FIX: group contacts by stage
+        const stageMap: Record<string, number> = {};
+
+        allContacts.forEach((c: any) => {
+          const stage = (c?.stage || "unknown").toLowerCase();
+          stageMap[stage] = (stageMap[stage] || 0) + 1;
+        });
+
+        const contactsByStage = Object.entries(stageMap).map(
+          ([stage, count]) => ({
+            stage,
+            count,
+          })
+        );
 
         return {
-          totalContacts: 0, // TODO: connect contacts API later
-          messagesSent: m.sent ?? 0,
-          messagesReceived: m.received ?? 0,
-          activeCampaigns: c.active ?? 0,
-          totalMessages: m.total ?? 0,
-          messagesLast30Days: m.total ?? 0,
-          contactsByStage: [], // TODO later
+          totalContacts: allContacts.length,
+          messagesSent: m?.total ?? 0,
+          messagesReceived: m?.delivered ?? 0,
+          activeCampaigns: c?.total_campaigns ?? 0,
+          totalMessages: m?.total ?? 0,
+          messagesLast30Days: m?.total ?? 0,
+          contactsByStage, // ✅ FIXED
         };
       } catch (err) {
-        console.error('Summary analytics error:', err);
+        console.error("Analytics error:", err);
         return {
           totalContacts: 0,
           messagesSent: 0,
@@ -56,40 +84,34 @@ export function useAnalyticsSummary(range?: DateRange) {
   });
 }
 
-// ─────────────────────────────────────────────────────────
-// ✅ MESSAGE ANALYTICS (MATCHES YOUR UI)
-// ─────────────────────────────────────────────────────────
-
 export function useMessageAnalytics(range?: DateRange) {
-  const params: Record<string, string> = {};
-  if (range?.from_date) params.from_date = range.from_date;
-  if (range?.to_date) params.to_date = range.to_date;
-
   return useQuery({
     queryKey: ['analytics', 'messages', range],
     queryFn: async () => {
       try {
-        const res = await apiGet<{ data: any }>('/analytics/messages', { params });
-        const data = res.data.data || {};
+        const data = await api.analytics.messages({
+          from_date: range?.from_date,
+          to_date: range?.to_date,
+        }) as any;
 
         return {
-          daily: data.daily ?? [],
+          daily: data?.daily ?? [],
           byDirection: [
-            { direction: 'inbound', count: data.received ?? 0 },
-            { direction: 'outbound', count: data.sent ?? 0 },
+            { direction: 'inbound', count: data?.read ?? 0 },
+            { direction: 'outbound', count: data?.total ?? 0 },
           ],
           byStatus: [
-            { status: 'sent', count: data.sent ?? 0 },
-            { status: 'delivered', count: data.delivered ?? 0 },
-            { status: 'read', count: data.read ?? 0 },
-            { status: 'failed', count: data.failed ?? 0 },
+            { status: 'sent', count: data?.sent ?? 0 },
+            { status: 'delivered', count: data?.delivered ?? 0 },
+            { status: 'read', count: data?.read ?? 0 },
+            { status: 'failed', count: data?.failed ?? 0 },
           ],
-          responseRate: data.sent
-            ? (data.received ?? 0) / data.sent
+          responseRate: data?.total
+            ? (data?.read ?? 0) / data.total
             : 0,
         };
       } catch (err) {
-        console.error('Message analytics error:', err);
+        console.error("Message analytics error:", err);
         return {
           daily: [],
           byDirection: [],
@@ -101,32 +123,26 @@ export function useMessageAnalytics(range?: DateRange) {
   });
 }
 
-// ─────────────────────────────────────────────────────────
-// ✅ CAMPAIGN ANALYTICS (FIXED NAME)
-// ─────────────────────────────────────────────────────────
-
 export function useCampaignsAnalytics(range?: DateRange) {
-  const params: Record<string, string> = {};
-  if (range?.from_date) params.from_date = range.from_date;
-  if (range?.to_date) params.to_date = range.to_date;
-
   return useQuery({
     queryKey: ['analytics', 'campaigns', range],
     queryFn: async () => {
       try {
-        const res = await apiGet<{ data: any }>('/analytics/campaigns', { params });
-        const data = res.data.data || {};
+        const data = await api.analytics.campaigns({
+          from_date: range?.from_date,
+          to_date: range?.to_date,
+        }) as any;
 
         return {
           summary: {
-            total_campaigns: data.total_campaigns ?? 0,
-            total_targeted: data.total_targeted ?? 0,
-            total_sent: data.total_sent ?? 0,
-            total_delivered: data.total_delivered ?? 0,
+            total_campaigns: data?.total_campaigns ?? 0,
+            total_targeted: data?.total_targeted ?? 0,
+            total_sent: data?.total_sent ?? 0,
+            total_delivered: data?.total_delivered ?? 0,
           },
         };
       } catch (err) {
-        console.error('Campaign analytics error:', err);
+        console.error("Campaign analytics error:", err);
         return {
           summary: {
             total_campaigns: 0,
@@ -140,30 +156,18 @@ export function useCampaignsAnalytics(range?: DateRange) {
   });
 }
 
-// ─────────────────────────────────────────────────────────
-// (OPTIONAL) KEEP YOUR OLD HOOKS IF NEEDED
-// ─────────────────────────────────────────────────────────
-
 export function useCallAnalytics(range?: DateRange) {
-  const params: Record<string, string> = {};
-  if (range?.from_date) params.from_date = range.from_date;
-  if (range?.to_date) params.to_date = range.to_date;
-
   return useQuery({
     queryKey: ['analytics', 'calls', range],
-    queryFn: () =>
-      apiGet('/analytics/calls', { params }).then((r) => r.data),
+    queryFn: async () => null,
+    enabled: false,
   });
 }
 
 export function useLatencyAnalytics(range?: DateRange) {
-  const params: Record<string, string> = {};
-  if (range?.from_date) params.from_date = range.from_date;
-  if (range?.to_date) params.to_date = range.to_date;
-
   return useQuery({
     queryKey: ['analytics', 'latency', range],
-    queryFn: () =>
-      apiGet('/analytics/latency', { params }).then((r) => r.data),
+    queryFn: async () => null,
+    enabled: false,
   });
 }
