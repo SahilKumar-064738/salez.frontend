@@ -68,12 +68,12 @@ export function normalizeRule(r: AutomationRule): NormalizedRule {
 // validates against, it will find the field it expects.
 export interface CreateRulePayload {
   name: string;
-  trigger_type: string; // snake_case
-  triggerType: string; // camelCase — same value, both sent
+  trigger_type: string;
+  triggerType?: string; // ✅ optional — TS happy, backend doesn't choke on it
   conditions: Record<string, unknown>;
   actions: AutomationAction[];
-  is_active: boolean; // snake_case
-  isActive: boolean; // camelCase — same value, both sent
+  is_active: boolean;
+  isActive?: boolean; // ✅ optional — same
 }
 
 interface ListResponse {

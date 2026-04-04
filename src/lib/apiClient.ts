@@ -7,15 +7,16 @@
  * imports continue to work without changes.
  */
 
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { tokenStore } from '@/api/api';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import { tokenStore } from "@/api/api";
 
-const BASE_URL = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+const BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ?? "http://localhost:4000/api/v1";
 
 const _client: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 15_000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 _client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -29,8 +30,17 @@ _client.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       tokenStore.clear();
-      window.location.href = '/login';
+      window.location.href = "/login";
     }
+
+    // ✅ ADD THIS — prints the exact Zod/Joi field errors causing 422
+    if (error.response?.status === 422) {
+      console.error(
+        "🔴 422 VALIDATION DETAIL:",
+        JSON.stringify(error.response.data, null, 2),
+      );
+    }
+
     return Promise.reject(error);
   },
 );
@@ -42,9 +52,9 @@ _client.interceptors.response.use(
  *   /contacts          → /contacts
  */
 function normalise(path: string): string {
-  if (path.startsWith('/api/v1')) return path.replace('/api/v1', '');
-  if (path.startsWith('/api/')) return path.replace('/api/', '/');
-  return path.startsWith('/') ? path : `/${path}`;
+  if (path.startsWith("/api/v1")) return path.replace("/api/v1", "");
+  if (path.startsWith("/api/")) return path.replace("/api/", "/");
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -59,7 +69,10 @@ export function clearToken(): void {
 }
 
 // ── Request helpers ───────────────────────────────────────────────────────────
-export async function apiGet<T>(path: string, config?: { params?: Record<string, string> }): Promise<T> {
+export async function apiGet<T>(
+  path: string,
+  config?: { params?: Record<string, string> },
+): Promise<T> {
   const res = await _client.get<T>(normalise(path), { params: config?.params });
   return res.data;
 }
@@ -84,4 +97,10 @@ export async function apiDelete<T = void>(path: string): Promise<T> {
   return res.data;
 }
 
-export default { get: apiGet, post: apiPost, put: apiPut, patch: apiPatch, delete: apiDelete };
+export default {
+  get: apiGet,
+  post: apiPost,
+  put: apiPut,
+  patch: apiPatch,
+  delete: apiDelete,
+};

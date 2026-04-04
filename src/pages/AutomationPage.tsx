@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -37,7 +38,6 @@ import {
   AlertCircle,
   Search,
   RefreshCw,
-  Activity,
   TrendingUp,
   Sparkles,
 } from "lucide-react";
@@ -71,7 +71,7 @@ interface ApprovedTemplate {
   variables: string[];
 }
 
-// UI-level rule shape (is_active from NormalizedRule)
+// UI-level rule shape
 type AutomationRule = NormalizedRule & {
   service_type?: ServiceType;
   conditions: { service_type?: ServiceType } & Record<string, unknown>;
@@ -101,7 +101,7 @@ const ACTION_DEFINITIONS: {
   },
   {
     type: "email",
-    label: "Send Email Reminder",
+    label: "Send WhatsApp Text",
     icon: Mail,
     needsTemplate: true,
     color: "text-blue-600 dark:text-blue-400",
@@ -109,7 +109,7 @@ const ACTION_DEFINITIONS: {
   },
   {
     type: "mark_due_soon",
-    label: "Mark as Due Soon",
+    label: "Add Tag to Contact",
     icon: Clock,
     needsTemplate: false,
     color: "text-amber-600 dark:text-amber-400",
@@ -117,7 +117,7 @@ const ACTION_DEFINITIONS: {
   },
   {
     type: "escalate",
-    label: "Escalate to Senior CA",
+    label: "Notify via Webhook",
     icon: Settings2,
     needsTemplate: false,
     color: "text-purple-600 dark:text-purple-400",
@@ -125,13 +125,13 @@ const ACTION_DEFINITIONS: {
   },
 ];
 
-// ─── Maps UI type → backend action type string ───────────────────────────────
+// ─── Maps UI type → backend action type string (exact backend enum values) ───
 function toBackendActionType(uiType: UIActionType): string {
   const map: Record<UIActionType, string> = {
-    whatsapp: "send_whatsapp",
-    email: "send_email",
-    mark_due_soon: "mark_due_soon",
-    escalate: "escalate",
+    whatsapp: "send_whatsapp", // ✅ exact backend enum
+    email: "send_whatsapp_text", // ✅ exact backend enum
+    mark_due_soon: "add_tag", // ✅ exact backend enum
+    escalate: "notify_webhook", // ✅ exact backend enum
   };
   return map[uiType];
 }
@@ -140,11 +140,13 @@ function toBackendActionType(uiType: UIActionType): string {
 function toUIActionType(backendType: string): UIActionType {
   const map: Record<string, UIActionType> = {
     send_whatsapp: "whatsapp",
-    send_email: "email",
-    mark_due_soon: "mark_due_soon",
-    escalate: "escalate",
+    send_whatsapp_text: "email",
+    update_contact_stage: "mark_due_soon",
+    create_scheduled_call: "escalate",
+    add_tag: "mark_due_soon",
+    notify_webhook: "escalate",
   };
-  return map[backendType] ?? (backendType as UIActionType);
+  return map[backendType] ?? "whatsapp";
 }
 
 const SERVICE_COLORS: Record<ServiceType, string> = {
@@ -157,7 +159,7 @@ const SERVICE_COLORS: Record<ServiceType, string> = {
 };
 
 /* ─────────────────────────────────────────────
-   UNCHANGED: useApprovedTemplates
+   useApprovedTemplates
 ───────────────────────────────────────────── */
 function useApprovedTemplates() {
   const [templates, setTemplates] = React.useState<ApprovedTemplate[]>([]);
@@ -207,11 +209,12 @@ function useApprovedTemplates() {
     const cancel = load();
     return cancel;
   }, [load]);
+
   return { templates, loading, error, reload: load };
 }
 
 /* ─────────────────────────────────────────────
-   UNCHANGED: ActionRow
+   ActionRow
 ───────────────────────────────────────────── */
 function ActionRow({
   config,
@@ -362,7 +365,6 @@ function ActionRow({
 
 /* ─────────────────────────────────────────────
    AutomationForm
-   FIXED: validation only requires template for needsTemplate actions
 ───────────────────────────────────────────── */
 export function AutomationForm({
   onSave,
@@ -383,7 +385,6 @@ export function AutomationForm({
   const [service, setService] = React.useState<ServiceType>(
     (initial?.conditions?.service_type as ServiceType) ?? "GST",
   );
-  // Map stored backend actions back to UI ActionConfig
   const [actions, setActions] = React.useState<ActionConfig[]>(() => {
     if (!initial?.actions?.length) return [];
     return initial.actions.map((a: any) => ({
@@ -405,7 +406,7 @@ export function AutomationForm({
     (d) => !selectedTypes.has(d.type),
   );
 
-  // ✅ FIXED: only require template_id for actions that needsTemplate
+  // Only require template_id for actions that needsTemplate
   const isValid =
     name.trim().length > 0 &&
     actions.length > 0 &&
@@ -614,7 +615,7 @@ export function AutomationForm({
 }
 
 /* ─────────────────────────────────────────────
-   RuleCard — FIXED: uses is_active not enabled
+   RuleCard
 ───────────────────────────────────────────── */
 function RuleCard({
   rule,
@@ -794,34 +795,35 @@ export default function AutomationPage() {
   const [filterService, setFilterService] = React.useState<string>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // ─── FIXED: build correct payload ──────────────────────────────────────────
+  // ─── Build payload with correct backend enum values ────────────────────────
   function buildPayload(data: {
     name: string;
     service_type: ServiceType;
     actions: ActionConfig[];
   }): CreateRulePayload {
-    const triggerValue = "record_created";
-    return {
+    const payload: CreateRulePayload = {
       name: data.name,
-      // ✅ Send BOTH casings — backend accepts whichever its schema expects
-      trigger_type: triggerValue,
-      triggerType: triggerValue,
+      trigger_type: "schedule", // ✅ valid backend enum value
       conditions: { service_type: data.service_type },
       actions: data.actions.map((a) => {
         const action: any = {
-          type: toBackendActionType(a.type), // ✅ NOT hardcoded
-          delay_minutes: (a.delay_days ?? 1) * 1440, // ✅ minutes for backend
-          delay_days: a.delay_days ?? 1, // ✅ also send days as fallback
+          type: toBackendActionType(a.type), // ✅ correct backend enum
         };
-        // ✅ Only include template_id when valid
+        // Only include template_id when valid
         if (a.template_id && a.template_id > 0) {
           action.template_id = a.template_id;
         }
+        // No whatsapp_account_id — backend doesn't accept it in actions payload
         return action;
       }),
       is_active: true,
-      isActive: true, // ✅ both casings
     };
+
+    console.log(
+      "[AutomationPage] API payload:",
+      JSON.stringify(payload, null, 2),
+    );
+    return payload;
   }
 
   const handleCreate = async (data: {
@@ -832,10 +834,6 @@ export default function AutomationPage() {
     setSaving(true);
     try {
       const payload = buildPayload(data);
-      console.log(
-        "[AutomationPage] CREATE payload:",
-        JSON.stringify(payload, null, 2),
-      );
       await createMutation.mutateAsync(payload);
       toast({ title: "Workflow rule created 🚀" });
       setCreateOpen(false);
@@ -967,7 +965,10 @@ export default function AutomationPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Workflow Rule</DialogTitle>
+                <DialogTitle>Create Automation Rule</DialogTitle>
+                <DialogDescription>
+                  Configure a scheduled automation rule for your contacts.
+                </DialogDescription>
               </DialogHeader>
               <AutomationForm
                 onSave={handleCreate}
@@ -1165,6 +1166,9 @@ export default function AutomationPage() {
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Rule</DialogTitle>
+              <DialogDescription>
+                Update your automation rule settings.
+              </DialogDescription>
             </DialogHeader>
             <AutomationForm
               initial={editingRule}
