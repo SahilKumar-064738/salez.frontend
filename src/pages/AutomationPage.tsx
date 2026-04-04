@@ -42,16 +42,24 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  useAutomationRules,
+  useCreateAutomationRule,
+  useUpdateAutomationRule,
+  useDeleteAutomationRule,
+  useToggleAutomationRule,
+} from "@/hooks/use-automation";
+import type { CreateRulePayload, NormalizedRule } from "@/services/automation";
 
 /* ─────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────── */
 
 type ServiceType = "GST" | "ITR" | "TDS" | "ROC" | "Other";
-type ActionType = "whatsapp" | "email" | "mark_due_soon" | "escalate";
+type UIActionType = "whatsapp" | "email" | "mark_due_soon" | "escalate";
 
 interface ActionConfig {
-  type: ActionType;
+  type: UIActionType;
   template_id?: number | null;
   delay_days: number;
 }
@@ -63,17 +71,11 @@ interface ApprovedTemplate {
   variables: string[];
 }
 
-interface AutomationRule {
-  id: number;
-  name: string;
-  service_type: ServiceType;
-  trigger_type: string;
-  conditions: { service_type: ServiceType };
-  actions: ActionConfig[];
-  enabled: boolean;
-  created_at?: string;
-  trigger_count?: number;
-}
+// UI-level rule shape (is_active from NormalizedRule)
+type AutomationRule = NormalizedRule & {
+  service_type?: ServiceType;
+  conditions: { service_type?: ServiceType } & Record<string, unknown>;
+};
 
 /* ─────────────────────────────────────────────
    CONSTANTS
@@ -82,7 +84,7 @@ interface AutomationRule {
 const SERVICE_TYPES: ServiceType[] = ["GST", "ITR", "TDS", "ROC", "Other"];
 
 const ACTION_DEFINITIONS: {
-  type: ActionType;
+  type: UIActionType;
   label: string;
   icon: React.ElementType;
   needsTemplate: boolean;
@@ -123,6 +125,28 @@ const ACTION_DEFINITIONS: {
   },
 ];
 
+// ─── Maps UI type → backend action type string ───────────────────────────────
+function toBackendActionType(uiType: UIActionType): string {
+  const map: Record<UIActionType, string> = {
+    whatsapp: "send_whatsapp",
+    email: "send_email",
+    mark_due_soon: "mark_due_soon",
+    escalate: "escalate",
+  };
+  return map[uiType];
+}
+
+// ─── Maps backend action type → UI type for display ─────────────────────────
+function toUIActionType(backendType: string): UIActionType {
+  const map: Record<string, UIActionType> = {
+    send_whatsapp: "whatsapp",
+    send_email: "email",
+    mark_due_soon: "mark_due_soon",
+    escalate: "escalate",
+  };
+  return map[backendType] ?? (backendType as UIActionType);
+}
+
 const SERVICE_COLORS: Record<ServiceType, string> = {
   GST: "bg-sky-100 text-sky-700 border border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800",
   ITR: "bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800",
@@ -133,15 +157,8 @@ const SERVICE_COLORS: Record<ServiceType, string> = {
 };
 
 /* ─────────────────────────────────────────────
-   FIXED HOOK — useApprovedTemplates
-   Fixes:
-   1. Correct endpoint: /api/v1/campaigns/templates
-   2. Correct response parsing: res.data.data
-   3. Client-side filter: status === "Approved"
-   4. Cancellation on unmount
-   5. Defensive field mapping
+   UNCHANGED: useApprovedTemplates
 ───────────────────────────────────────────── */
-
 function useApprovedTemplates() {
   const [templates, setTemplates] = React.useState<ApprovedTemplate[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -149,22 +166,15 @@ function useApprovedTemplates() {
 
   const load = React.useCallback(() => {
     let cancelled = false;
-
     setLoading(true);
     setError(null);
-
     api
       .get<{ success: boolean; data: unknown }>("/api/v1/campaigns/templates")
       .then((res) => {
         if (cancelled) return;
-
-        // Backend: { success, data: [...] }
-        // api wrapper may unwrap once → res.data is the body → actual array at res.data.data
         const raw =
           (res as any)?.data?.data ?? (res as any)?.data ?? (res as any) ?? [];
-
         const list: unknown[] = Array.isArray(raw) ? raw : [];
-
         const approved: ApprovedTemplate[] = list
           .filter(
             (t: any) => String(t?.status || "").toLowerCase() === "approved",
@@ -177,7 +187,6 @@ function useApprovedTemplates() {
               ? t.variables.map(String)
               : [],
           }));
-
         setTemplates(approved);
       })
       .catch(() => {
@@ -189,7 +198,6 @@ function useApprovedTemplates() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -199,14 +207,12 @@ function useApprovedTemplates() {
     const cancel = load();
     return cancel;
   }, [load]);
-
   return { templates, loading, error, reload: load };
 }
 
 /* ─────────────────────────────────────────────
-   ACTION ROW
+   UNCHANGED: ActionRow
 ───────────────────────────────────────────── */
-
 function ActionRow({
   config,
   templates,
@@ -228,10 +234,8 @@ function ActionRow({
 }) {
   const def = ACTION_DEFINITIONS.find((d) => d.type === config.type)!;
   const Icon = def.icon;
-
   return (
     <div className="relative rounded-xl border border-border/60 bg-card overflow-hidden transition-all duration-200 hover:border-border hover:shadow-sm">
-      {/* Left accent bar */}
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl",
@@ -241,9 +245,7 @@ function ActionRow({
           config.type === "escalate" && "bg-purple-500",
         )}
       />
-
       <div className="pl-5 pr-4 py-4 space-y-4">
-        {/* Header row */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <div className={cn("p-1.5 rounded-lg", def.bg)}>
@@ -265,15 +267,12 @@ function ActionRow({
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
-
-        {/* Template picker */}
         {def.needsTemplate && (
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Message Template{" "}
               <span className="text-destructive normal-case">*required</span>
             </label>
-
             {templatesLoading ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2.5 border border-border/40">
                 <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" />
@@ -330,8 +329,6 @@ function ActionRow({
             )}
           </div>
         )}
-
-        {/* Delay slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -364,9 +361,9 @@ function ActionRow({
 }
 
 /* ─────────────────────────────────────────────
-   AUTOMATION FORM
+   AutomationForm
+   FIXED: validation only requires template for needsTemplate actions
 ───────────────────────────────────────────── */
-
 export function AutomationForm({
   onSave,
   onClose,
@@ -376,10 +373,7 @@ export function AutomationForm({
   onSave: (data: {
     name: string;
     service_type: ServiceType;
-    trigger_type: string;
-    conditions: { service_type: ServiceType };
     actions: ActionConfig[];
-    enabled: boolean;
   }) => void;
   onClose: () => void;
   saving: boolean;
@@ -387,13 +381,18 @@ export function AutomationForm({
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [service, setService] = React.useState<ServiceType>(
-    initial?.conditions?.service_type ?? "GST",
+    (initial?.conditions?.service_type as ServiceType) ?? "GST",
   );
-  const [actions, setActions] = React.useState<ActionConfig[]>(
-    initial?.actions ?? [],
-  );
+  // Map stored backend actions back to UI ActionConfig
+  const [actions, setActions] = React.useState<ActionConfig[]>(() => {
+    if (!initial?.actions?.length) return [];
+    return initial.actions.map((a: any) => ({
+      type: toUIActionType(a.type) as UIActionType,
+      template_id: a.template_id ?? null,
+      delay_days: a.delay_days ?? Math.round((a.delay_minutes ?? 10080) / 1440),
+    }));
+  });
   const [pickerOpen, setPickerOpen] = React.useState(false);
-
   const {
     templates,
     loading: templatesLoading,
@@ -406,31 +405,23 @@ export function AutomationForm({
     (d) => !selectedTypes.has(d.type),
   );
 
+  // ✅ FIXED: only require template_id for actions that needsTemplate
   const isValid =
     name.trim().length > 0 &&
     actions.length > 0 &&
     actions.every((a) => {
       const def = ACTION_DEFINITIONS.find((d) => d.type === a.type)!;
-      return !def.needsTemplate || !!a.template_id;
+      return !def.needsTemplate || (!!a.template_id && a.template_id > 0);
     });
 
-  function addAction(type: ActionType) {
+  function addAction(type: UIActionType) {
     if (selectedTypes.has(type)) return;
     setActions((prev) => [...prev, { type, template_id: null, delay_days: 7 }]);
     setPickerOpen(false);
   }
 
-  function updateAction(index: number, updated: ActionConfig) {
-    setActions((prev) => prev.map((a, i) => (i === index ? updated : a)));
-  }
-
-  function removeAction(index: number) {
-    setActions((prev) => prev.filter((_, i) => i !== index));
-  }
-
   return (
     <div className="space-y-5 py-1">
-      {/* Rule name */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Rule Name <span className="text-destructive">*</span>
@@ -443,7 +434,6 @@ export function AutomationForm({
         />
       </div>
 
-      {/* Service type */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Trigger: When a record of type…
@@ -475,17 +465,13 @@ export function AutomationForm({
         </p>
       </div>
 
-      {/* Actions section */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Actions{" "}
-            <span className="text-muted-foreground/50 normal-case font-normal">
-              ({actions.length} configured)
-            </span>
-          </label>
-        </div>
-
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Actions{" "}
+          <span className="text-muted-foreground/50 normal-case font-normal">
+            ({actions.length} configured)
+          </span>
+        </label>
         {actions.length === 0 && (
           <div className="rounded-xl border border-dashed border-border/60 py-10 flex flex-col items-center gap-2.5 text-muted-foreground/50">
             <div className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center">
@@ -496,7 +482,6 @@ export function AutomationForm({
             </p>
           </div>
         )}
-
         <div className="space-y-2.5">
           {actions.map((action, idx) => (
             <ActionRow
@@ -507,13 +492,17 @@ export function AutomationForm({
               templatesLoading={templatesLoading}
               templatesError={templatesError}
               onReloadTemplates={reloadTemplates}
-              onChange={(updated) => updateAction(idx, updated)}
-              onRemove={() => removeAction(idx)}
+              onChange={(updated) =>
+                setActions((prev) =>
+                  prev.map((a, i) => (i === idx ? updated : a)),
+                )
+              }
+              onRemove={() =>
+                setActions((prev) => prev.filter((_, i) => i !== idx))
+              }
             />
           ))}
         </div>
-
-        {/* Add action picker */}
         {availableToAdd.length > 0 && (
           <div className="relative">
             <Button
@@ -530,7 +519,6 @@ export function AutomationForm({
                 <ChevronDown className="h-3.5 w-3.5 ml-auto" />
               )}
             </Button>
-
             {pickerOpen && (
               <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
                 {availableToAdd.map((def) => {
@@ -560,7 +548,6 @@ export function AutomationForm({
         )}
       </div>
 
-      {/* Rule Preview */}
       {actions.length > 0 && (
         <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-50/80 to-blue-50/40 dark:from-indigo-950/40 dark:to-blue-950/20 p-4 space-y-2">
           <div className="flex items-center gap-2">
@@ -601,7 +588,6 @@ export function AutomationForm({
         </div>
       )}
 
-      {/* Buttons */}
       <div className="flex gap-2 pt-1">
         <Button
           variant="outline"
@@ -611,18 +597,7 @@ export function AutomationForm({
           Cancel
         </Button>
         <Button
-          onClick={() =>
-            onSave({
-              name,
-              service_type: service,
-              trigger_type: "record_created",
-              conditions: {
-                service_type: service,
-              },
-              actions, // ✅ DO NOT MODIFY HERE
-              enabled: true,
-            })
-          }
+          onClick={() => onSave({ name, service_type: service, actions })}
           disabled={saving || !isValid}
           className="flex-1 rounded-xl h-9 bg-indigo-600 hover:bg-indigo-700 shadow-md disabled:opacity-40"
         >
@@ -639,9 +614,8 @@ export function AutomationForm({
 }
 
 /* ─────────────────────────────────────────────
-   RULE CARD
+   RuleCard — FIXED: uses is_active not enabled
 ───────────────────────────────────────────── */
-
 function RuleCard({
   rule,
   onToggle,
@@ -651,51 +625,48 @@ function RuleCard({
   toggling,
 }: {
   rule: AutomationRule;
-  onToggle: (rule: AutomationRule) => void;
+  onToggle: (r: AutomationRule) => void;
   onDelete: (id: number) => void;
-  onEdit: (rule: AutomationRule) => void;
+  onEdit: (r: AutomationRule) => void;
   deleting: number | null;
   toggling: number | null;
 }) {
+  const serviceType = (rule.conditions?.service_type as ServiceType) ?? "Other";
   return (
     <div
       className={cn(
         "group relative flex items-start gap-4 p-5 rounded-2xl border transition-all duration-200",
-        rule.enabled
+        rule.is_active
           ? "border-border/60 bg-card hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md hover:-translate-y-px"
           : "border-border/40 bg-muted/20 opacity-60",
       )}
     >
-      {/* Status dot */}
       <div className="flex-shrink-0 mt-1.5">
         <div
           className={cn(
             "w-2 h-2 rounded-full transition-all duration-300",
-            rule.enabled
+            rule.is_active
               ? "bg-emerald-500 shadow-[0_0_6px_1px_rgba(16,185,129,0.4)]"
               : "bg-muted-foreground/30",
           )}
         />
       </div>
-
       <div className="flex-1 min-w-0 space-y-3">
-        {/* Title + service badge */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-sm leading-none">{rule.name}</span>
           <span
             className={cn(
               "inline-block rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
-              SERVICE_COLORS[rule.conditions.service_type],
+              SERVICE_COLORS[serviceType],
             )}
           >
-            {rule.conditions.service_type}
+            {serviceType}
           </span>
         </div>
-
-        {/* Actions */}
         <div className="space-y-1">
-          {rule.actions.map((action, i) => {
-            const def = ACTION_DEFINITIONS.find((d) => d.type === action.type);
+          {(rule.actions ?? []).map((action: any, i: number) => {
+            const uiType = toUIActionType(action.type);
+            const def = ACTION_DEFINITIONS.find((d) => d.type === uiType);
             if (!def) return null;
             const Icon = def.icon;
             return (
@@ -715,40 +686,27 @@ function RuleCard({
                 )}
                 <span className="flex items-center gap-1 text-[10px] text-muted-foreground/60 ml-1">
                   <Clock className="h-2.5 w-2.5" />
-                  {action.delay_days}d
+                  {action.delay_days ??
+                    Math.round((action.delay_minutes ?? 0) / 1440)}
+                  d
                 </span>
               </div>
             );
           })}
         </div>
-
-        {/* Meta */}
-        {(rule.created_at || rule.trigger_count !== undefined) && (
+        {rule.created_at && (
           <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60">
-            {rule.created_at && (
-              <span>
-                Created{" "}
-                {new Date(rule.created_at).toLocaleDateString(undefined, {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            )}
-            {rule.trigger_count !== undefined && (
-              <span className="flex items-center gap-1">
-                <Activity className="h-2.5 w-2.5" />
-                Triggered{" "}
-                <strong className="text-muted-foreground">
-                  {rule.trigger_count}×
-                </strong>
-              </span>
-            )}
+            <span>
+              Created{" "}
+              {new Date(rule.created_at).toLocaleDateString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
           </div>
         )}
       </div>
-
-      {/* Controls */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <Button
           variant="ghost"
@@ -758,17 +716,15 @@ function RuleCard({
         >
           Edit
         </Button>
-
         {toggling === rule.id ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : (
           <Switch
-            checked={rule.enabled}
+            checked={rule.is_active}
             onCheckedChange={() => onToggle(rule)}
             className="data-[state=checked]:bg-indigo-600"
           />
         )}
-
         <Button
           variant="ghost"
           size="icon"
@@ -786,10 +742,6 @@ function RuleCard({
     </div>
   );
 }
-
-/* ─────────────────────────────────────────────
-   SKELETON LOADER
-───────────────────────────────────────────── */
 
 function RuleSkeleton() {
   return (
@@ -817,12 +769,21 @@ function RuleSkeleton() {
 /* ─────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────── */
-
 export default function AutomationPage() {
   const { toast } = useToast();
 
-  const [rules, setRules] = React.useState<AutomationRule[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const {
+    data: rulesData,
+    isLoading: loading,
+    refetch: fetchRules,
+  } = useAutomationRules();
+  const createMutation = useCreateAutomationRule();
+  const updateMutation = useUpdateAutomationRule();
+  const deleteMutation = useDeleteAutomationRule();
+  const toggleMutation = useToggleAutomationRule();
+
+  const rules = (rulesData ?? []) as AutomationRule[];
+
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<number | null>(null);
   const [toggling, setToggling] = React.useState<number | null>(null);
@@ -833,95 +794,79 @@ export default function AutomationPage() {
   const [filterService, setFilterService] = React.useState<string>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const fetchRules = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get<{ success: boolean; data: unknown }>(
-        "/api/v1/automation",
-      );
-      const raw =
-        (res as any)?.data?.data ?? (res as any)?.data ?? (res as any) ?? [];
-      setRules(Array.isArray(raw) ? (raw as AutomationRule[]) : []);
-    } catch {
-      setRules([]);
-      toast({ title: "Failed to load rules", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  React.useEffect(() => {
-    fetchRules();
-  }, [fetchRules]);
+  // ─── FIXED: build correct payload ──────────────────────────────────────────
+  function buildPayload(data: {
+    name: string;
+    service_type: ServiceType;
+    actions: ActionConfig[];
+  }): CreateRulePayload {
+    const triggerValue = "record_created";
+    return {
+      name: data.name,
+      // ✅ Send BOTH casings — backend accepts whichever its schema expects
+      trigger_type: triggerValue,
+      triggerType: triggerValue,
+      conditions: { service_type: data.service_type },
+      actions: data.actions.map((a) => {
+        const action: any = {
+          type: toBackendActionType(a.type), // ✅ NOT hardcoded
+          delay_minutes: (a.delay_days ?? 1) * 1440, // ✅ minutes for backend
+          delay_days: a.delay_days ?? 1, // ✅ also send days as fallback
+        };
+        // ✅ Only include template_id when valid
+        if (a.template_id && a.template_id > 0) {
+          action.template_id = a.template_id;
+        }
+        return action;
+      }),
+      is_active: true,
+      isActive: true, // ✅ both casings
+    };
+  }
 
   const handleCreate = async (data: {
     name: string;
     service_type: ServiceType;
-    trigger_type: string;
-    conditions: { service_type: ServiceType };
     actions: ActionConfig[];
-    enabled: boolean;
   }) => {
     setSaving(true);
     try {
-      // ✅ validation
-      if (!data.actions.length) {
-        toast({ title: "Add at least one action", variant: "destructive" });
-        return;
-      }
-
-      if (!data.actions.every((a) => a.template_id)) {
-        toast({
-          title: "Please select template for all actions",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // ✅ payload
-      const payload = {
-        name: data.name,
-        trigger_type: "contact_created",
-        conditions: {
-          service_type: data.conditions.service_type,
-        },
-        actions: data.actions.map((a: ActionConfig) => ({
-          type: "send_whatsapp",
-          template_id: Number(a.template_id),
-          delay_days: Number(a.delay_days || 1),
-        })),
-        is_active: data.enabled,
-      };
-
-      console.log("FINAL PAYLOAD:", payload);
-
-      await api.post("/api/v1/automation", payload);
-
+      const payload = buildPayload(data);
+      console.log(
+        "[AutomationPage] CREATE payload:",
+        JSON.stringify(payload, null, 2),
+      );
+      await createMutation.mutateAsync(payload);
       toast({ title: "Automation rule created 🚀" });
       setCreateOpen(false);
-      fetchRules();
     } catch (err: any) {
-      console.error("CREATE ERROR:", err?.response?.data || err);
+      console.error("[AutomationPage] CREATE ERROR:", err?.message ?? err);
       toast({
-        title: err?.response?.data?.error || "Error creating rule",
+        title: err?.message || "Error creating rule",
         variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
   };
-  const handleUpdate = async (
-    data: Omit<AutomationRule, "id" | "created_at" | "trigger_count">,
-  ) => {
+
+  const handleUpdate = async (data: {
+    name: string;
+    service_type: ServiceType;
+    actions: ActionConfig[];
+  }) => {
     if (!editingRule) return;
     setSaving(true);
     try {
-      await api.put(`/api/v1/automation/${editingRule.id}`, data);
+      const payload = { id: editingRule.id, ...buildPayload(data) };
+      await updateMutation.mutateAsync(payload);
       toast({ title: "Rule updated" });
       setEditingRule(null);
-      fetchRules();
-    } catch {
-      toast({ title: "Error updating rule", variant: "destructive" });
+    } catch (err: any) {
+      toast({
+        title: err?.message || "Error updating rule",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -930,11 +875,13 @@ export default function AutomationPage() {
   const handleDelete = async (id: number) => {
     setDeleting(id);
     try {
-      await api.delete(`/api/v1/automation/${id}`);
+      await deleteMutation.mutateAsync(id);
       toast({ title: "Rule deleted" });
-      setRules((prev) => prev.filter((r) => r.id !== id));
-    } catch {
-      toast({ title: "Failed to delete rule", variant: "destructive" });
+    } catch (err: any) {
+      toast({
+        title: err?.message || "Failed to delete rule",
+        variant: "destructive",
+      });
     } finally {
       setDeleting(null);
     }
@@ -942,17 +889,13 @@ export default function AutomationPage() {
 
   const handleToggle = async (rule: AutomationRule) => {
     setToggling(rule.id);
-    const updated = { ...rule, enabled: !rule.enabled };
-    // Optimistic update
-    setRules((prev) => prev.map((r) => (r.id === rule.id ? updated : r)));
     try {
-      await api.put(`/api/v1/automation/${rule.id}`, {
-        enabled: updated.enabled,
+      await toggleMutation.mutateAsync(rule.id);
+    } catch (err: any) {
+      toast({
+        title: err?.message || "Failed to update rule",
+        variant: "destructive",
       });
-    } catch {
-      // Rollback on failure
-      setRules((prev) => prev.map((r) => (r.id === rule.id ? rule : r)));
-      toast({ title: "Failed to update rule", variant: "destructive" });
     } finally {
       setToggling(null);
     }
@@ -960,11 +903,10 @@ export default function AutomationPage() {
 
   const filtered = React.useMemo(() => {
     let result = rules;
-    if (filterService !== "all") {
+    if (filterService !== "all")
       result = result.filter(
         (r) => r.conditions?.service_type === filterService,
       );
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((r) => r.name.toLowerCase().includes(q));
@@ -975,8 +917,8 @@ export default function AutomationPage() {
   const counts = React.useMemo(
     () => ({
       total: rules.length,
-      active: rules.filter((r) => r.enabled).length,
-      inactive: rules.filter((r) => !r.enabled).length,
+      active: rules.filter((r) => r.is_active).length,
+      inactive: rules.filter((r) => !r.is_active).length,
     }),
     [rules],
   );
@@ -986,7 +928,7 @@ export default function AutomationPage() {
       className="max-w-[900px] mx-auto px-6 py-8 space-y-6"
       data-testid="page-automation"
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">
@@ -1003,13 +945,12 @@ export default function AutomationPage() {
             more — independently timed.
           </p>
         </div>
-
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             className="h-9 rounded-xl gap-1.5 text-xs"
-            onClick={fetchRules}
+            onClick={() => fetchRules()}
             disabled={loading}
           >
             <RefreshCw
@@ -1017,7 +958,6 @@ export default function AutomationPage() {
             />
             Refresh
           </Button>
-
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 h-9">
@@ -1039,7 +979,7 @@ export default function AutomationPage() {
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
           {
@@ -1092,7 +1032,7 @@ export default function AutomationPage() {
         ))}
       </div>
 
-      {/* ── Info banner ── */}
+      {/* Info banner */}
       <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-gradient-to-r from-indigo-50/80 to-blue-50/40 dark:from-indigo-950/40 dark:to-blue-950/20 px-5 py-4">
         <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
           How Multi-Action Automation Works
@@ -1114,7 +1054,7 @@ export default function AutomationPage() {
         </div>
       </div>
 
-      {/* ── Filter + Search ── */}
+      {/* Filter + Search */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
@@ -1126,7 +1066,6 @@ export default function AutomationPage() {
             className="h-9 w-48 rounded-xl border border-border/60 bg-background pl-8 pr-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 transition-colors"
           />
         </div>
-
         <Select value={filterService} onValueChange={setFilterService}>
           <SelectTrigger className="w-[150px] h-9 rounded-xl text-sm border-border/60">
             <SelectValue placeholder="All services" />
@@ -1147,7 +1086,6 @@ export default function AutomationPage() {
             ))}
           </SelectContent>
         </Select>
-
         {(filterService !== "all" || searchQuery) && (
           <Button
             variant="ghost"
@@ -1161,14 +1099,13 @@ export default function AutomationPage() {
             Clear filters
           </Button>
         )}
-
         <span className="ml-auto text-xs text-muted-foreground">
           {filtered.length} rule{filtered.length !== 1 ? "s" : ""}
           {filtered.length !== rules.length && ` of ${rules.length}`}
         </span>
       </div>
 
-      {/* ── Rules list ── */}
+      {/* Rules list */}
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2, 3].map((i) => (
@@ -1219,7 +1156,7 @@ export default function AutomationPage() {
         </div>
       )}
 
-      {/* ── Edit dialog ── */}
+      {/* Edit dialog */}
       {editingRule && (
         <Dialog
           open={!!editingRule}
