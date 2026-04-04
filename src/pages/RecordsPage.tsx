@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { api } from "@/api/api";
 import {
   Plus,
   Loader2,
@@ -294,9 +294,33 @@ export default function RecordsPage() {
   const fetchRecords = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<any>("/api/v1/records");
-      const data = (res as any)?.data || res || [];
-      setRecords(Array.isArray(data) ? data : []);
+      let allContacts: any[] = [];
+let cursor: string | undefined = undefined;
+
+while (true) {
+  const res = await api.contacts.list({
+    cursor,
+    limit: 100,
+  });
+
+  allContacts = [...allContacts, ...(res.data || [])];
+
+  if (!res.hasMore) break;
+
+  cursor = res.nextCursor || undefined;
+}
+
+const mapped = allContacts.map((c: any) => ({
+  id: c.id,
+  client_name: c.name || "Unknown",
+  phone: c.phone,
+  service_type: "Other",
+  due_date: new Date().toISOString(),
+  reminder_days_before: 3,
+  created_at: c.created_at,
+}));
+
+setRecords(mapped);
     } catch {
       // If endpoint not yet available, start with empty state
       setRecords([]);
@@ -314,16 +338,29 @@ export default function RecordsPage() {
   ) => {
     setSaving(true);
     try {
-      await api.post("/api/v1/records", data);
+      await api.contacts.create({
+  name: data.client_name,
+  phone: data.phone.startsWith("+")
+    ? data.phone
+    : `+91${data.phone}`,
+  stage: "new",
+  notes: `Service: ${data.service_type} | Due: ${data.due_date} | Reminder: ${data.reminder_days_before} days`,
+});
       toast({
         title: "Record added",
         description: `Reminder set for ${data.reminder_days_before} days before due date.`,
       });
       setCreateOpen(false);
       fetchRecords();
-    } catch {
-      toast({ title: "Failed to add record", variant: "destructive" });
-    } finally {
+    }  catch (error: any) {
+  console.error("CREATE ERROR:", error?.response || error);
+
+  toast({
+    title: "Failed to add record",
+    description: error?.response?.data?.message || "Something went wrong",
+    variant: "destructive",
+  });
+} finally {
       setSaving(false);
     }
   };
@@ -331,7 +368,7 @@ export default function RecordsPage() {
   const handleDelete = async (id: number) => {
     setDeleting(id);
     try {
-      await api.delete(`/api/v1/records/${id}`);
+      await api.contacts.delete(id);
       toast({ title: "Record deleted" });
       setRecords((prev) => prev.filter((r) => r.id !== id));
     } catch {

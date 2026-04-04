@@ -1,23 +1,9 @@
 /**
- * src/services/campaignsService.ts
- *
- * Backend contract (all under /api/v1 — handled by apiClient):
- *   GET    /campaigns                list campaigns
- *   GET    /campaigns/:id            get single campaign
- *   POST   /campaigns                create campaign
- *   POST   /campaigns/:id/send       trigger dispatch (owner/admin only)
- *   POST   /campaigns/:id/cancel     cancel campaign (owner/admin only)
- *   PUT    /campaigns/:id            update campaign
- *   DELETE /campaigns/:id            delete campaign
- *
- * Fixes applied:
- *   Issue 6: recipientContactIds → contactIds
- *   Issue 6: whatsappAccountId is now required on create
- *   Issue 7: PUT + DELETE routes added (were missing from frontend service)
- *   Response unwrapping: { success, data: {...} }
+ * src/services/campaignsService.ts — REFACTORED
+ * Delegates to typed Axios api client in @/api/api.
  */
-
-import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/lib/apiClient";
+import { api } from '@/api/api';
+import type { CreateCampaignPayload } from '@/api/api';
 
 export interface Campaign {
   id: number;
@@ -28,7 +14,7 @@ export interface Campaign {
   scheduledAt?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
-  status?: "draft" | "scheduled" | "running" | "completed" | "cancelled" | null;
+  status?: 'draft' | 'scheduled' | 'running' | 'completed' | 'cancelled' | null;
   totalRecipients?: number;
   sentCount?: number;
   failedCount?: number;
@@ -38,7 +24,7 @@ export interface Campaign {
 function normalize(c: any): Campaign {
   return {
     id: Number(c.id),
-    name: c.name ?? "",
+    name: c.name ?? '',
     templateId: Number(c.templateId ?? c.template_id ?? 0),
     templateName: c.templateName ?? c.template_name ?? null,
     whatsappAccountId: Number(c.whatsappAccountId ?? c.whatsapp_account_id ?? 0) || null,
@@ -54,73 +40,49 @@ function normalize(c: any): Campaign {
 }
 
 export const campaignsService = {
-  /**
-   * GET /campaigns
-   * Backend response: { success, data: [...] }
-   */
   async list(): Promise<Campaign[]> {
-    const raw = await apiGet<any>("/campaigns");
-    const list = raw?.data ?? raw ?? [];
-    return (Array.isArray(list) ? list : []).map(normalize);
+    const raw = await api.campaigns.list();
+    return (raw.data ?? []).map(normalize);
   },
 
   async get(id: number): Promise<Campaign> {
-    const raw = await apiGet<any>(`/campaigns/${id}`);
-    return normalize(raw?.data ?? raw);
+    const raw = await api.campaigns.getById(id);
+    return normalize(raw);
   },
 
-  /**
-   * POST /campaigns
-   * FIX (Issue 6):
-   *   - recipientContactIds → contactIds
-   *   - whatsappAccountId is required
-   */
   async create(data: {
     name: string;
     templateId: number;
-    whatsappAccountId: number;         // required by backend
+    whatsappAccountId: number;
     scheduledAt?: string | null;
-    contactIds?: number[];              // renamed from recipientContactIds
+    contactIds?: number[];
     filters?: { stage?: string; tags?: string[] };
   }): Promise<Campaign> {
-    const raw = await apiPost<any>("/campaigns", {
+    const payload: CreateCampaignPayload = {
       name: data.name,
       templateId: data.templateId,
       whatsappAccountId: data.whatsappAccountId,
-      scheduledAt: data.scheduledAt ?{ scheduledAt: data.scheduledAt } : {},
-      contactIds: data.contactIds ?? [],        // ← correct field name
-      filters: data.filters,
-    });
-    // Response: { success, data: { id, name, status, recipientCount } }
-    return normalize(raw?.data ?? raw);
+      contactIds: data.contactIds ?? [],
+      scheduledAt: data.scheduledAt ?? undefined,
+    };
+    const raw = await api.campaigns.create(payload);
+    return normalize(raw);
   },
 
-  /**
-   * POST /campaigns/:id/send
-   * Enqueues campaign dispatch. Owner/admin only.
-   * Response: { success, data: { campaignId, status: "queued" } }
-   */
   async send(id: number): Promise<{ campaignId: number; status: string }> {
-    const raw = await apiPost<any>(`/campaigns/${id}/send`);
-    const d = raw?.data ?? raw;
+    const raw = await api.campaigns.send(id);
+    const d = (raw as any)?.data ?? raw;
     return {
       campaignId: Number(d?.campaignId ?? d?.campaign_id ?? id),
-      status: d?.status ?? "queued",
+      status: d?.status ?? 'queued',
     };
   },
 
-  /**
-   * POST /campaigns/:id/cancel
-   */
   async cancel(id: number): Promise<Campaign> {
-    const raw = await apiPost<any>(`/campaigns/${id}/cancel`);
-    return normalize(raw?.data ?? raw);
+    const raw = await api.campaigns.cancel(id);
+    return normalize((raw as any)?.data ?? raw);
   },
 
-  /**
-   * PUT /campaigns/:id
-   * FIX (Issue 7): This route now exists — was missing from old service.
-   */
   async update(
     id: number,
     data: Partial<{
@@ -130,16 +92,14 @@ export const campaignsService = {
       scheduledAt: string | null;
     }>
   ): Promise<Campaign> {
+    // Use the underlying client via apiClient for PATCH until api namespace supports it
+    const { apiPatch } = await import('@/lib/apiClient');
     const raw = await apiPatch<any>(`/campaigns/${id}`, data);
     return normalize(raw?.data ?? raw);
   },
 
-  /**
-   * DELETE /campaigns/:id
-   * FIX (Issue 7): This route now exists — was missing from old service.
-   * Cannot delete a running campaign (backend returns 409).
-   */
   async delete(id: number): Promise<void> {
+    const { apiDelete } = await import('@/lib/apiClient');
     await apiDelete(`/campaigns/${id}`);
   },
 };

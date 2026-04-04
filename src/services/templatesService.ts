@@ -1,30 +1,18 @@
 /**
- * src/services/templatesService.ts
- *
- * Backend contract (all under /api/v1 — handled by apiClient):
- *   GET    /campaigns/templates        list all templates
- *   GET    /campaigns/templates/:id    get single template
- *   POST   /campaigns/templates        create template
- *   PUT    /campaigns/templates/:id    update template
- *   DELETE /campaigns/templates/:id    delete (owner/admin only)
- *
- * Fix: Templates are mounted under /campaigns/templates, NOT /templates.
- * The old /api/templates path was wrong.
- *
- * Request payload:
- *   { name, content, variables[], category }
- *   category: "marketing" | "utility" | "authentication"
+ * src/services/templatesService.ts — REFACTORED
+ * Delegates to typed Axios api client in @/api/api.
+ * Templates are under /campaigns/templates on the backend.
  */
-
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/apiClient";
+import { api } from '@/api/api';
+import type { CreateTemplatePayload } from '@/api/api';
 
 export interface Template {
   id: number;
   name: string;
   content: string;
   variables?: string[];
-  category?: "marketing" | "utility" | "authentication" | null;
-  status?: "approved" | "pending" | "rejected" | null;
+  category?: 'marketing' | 'utility' | 'authentication' | null;
+  status?: 'approved' | 'pending' | 'rejected' | null;
   rejectionReason?: string | null;
   created_at?: string;
 }
@@ -32,8 +20,8 @@ export interface Template {
 function normalize(t: any): Template {
   return {
     id: Number(t.id),
-    name: t.name ?? "",
-    content: t.content ?? "",
+    name: t.name ?? '',
+    content: t.content ?? '',
     variables: Array.isArray(t.variables) ? t.variables : [],
     category: t.category ?? null,
     status: t.status ?? null,
@@ -44,12 +32,13 @@ function normalize(t: any): Template {
 
 export const templatesService = {
   async list(): Promise<Template[]> {
-    const raw = await apiGet<any>("/campaigns/templates");
-    const list = raw?.data ?? raw ?? [];
-    return (Array.isArray(list) ? list : []).map(normalize);
+    const raw = await api.campaigns.listTemplates();
+    return (Array.isArray(raw) ? raw : []).map(normalize);
   },
 
   async get(id: number): Promise<Template> {
+    // No direct api.campaigns.getTemplate — use apiGet shim
+    const { apiGet } = await import('@/lib/apiClient');
     const raw = await apiGet<any>(`/campaigns/templates/${id}`);
     return normalize(raw?.data ?? raw);
   },
@@ -58,15 +47,16 @@ export const templatesService = {
     name: string;
     content: string;
     variables?: string[];
-    category?: "marketing" | "utility" | "authentication" | null;
+    category?: 'marketing' | 'utility' | 'authentication' | null;
   }): Promise<Template> {
-    const raw = await apiPost<any>("/campaigns/templates", {
+    const payload: CreateTemplatePayload = {
       name: data.name,
       content: data.content,
       variables: data.variables ?? [],
-      category: data.category ?? "marketing",
-    });
-    return normalize(raw?.data ?? raw);
+      category: data.category ?? 'marketing',
+    };
+    const raw = await api.campaigns.createTemplate(payload);
+    return normalize(raw);
   },
 
   async update(
@@ -75,14 +65,15 @@ export const templatesService = {
       name: string;
       content: string;
       variables: string[];
-      category: "marketing" | "utility" | "authentication" | null;
+      category: 'marketing' | 'utility' | 'authentication' | null;
     }>
   ): Promise<Template> {
+    const { apiPatch } = await import('@/lib/apiClient');
     const raw = await apiPatch<any>(`/campaigns/templates/${id}`, data);
     return normalize(raw?.data ?? raw);
   },
 
   async delete(id: number): Promise<void> {
-    await apiDelete(`/campaigns/templates/${id}`);
+    await api.campaigns.deleteTemplate(id);
   },
 };

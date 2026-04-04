@@ -469,33 +469,71 @@ export default function BroadcastPage() {
                       <TableCell className="text-sm text-muted-foreground">{fmtDateTime(c.scheduledAt)}</TableCell>
                       <TableCell className="text-sm">{c.sentCount ?? 0}</TableCell>
                       <TableCell className="text-sm">{c.repliedCount ?? 0}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          <Button
-                            variant="outline" className="rounded-xl"
-                            onClick={() => updateM.mutate(
-                              { id: c.id, updates: { status: c.status === "Paused" ? "Running" : "Paused" } as any },
-                              {
-                                onSuccess: () => toast({ title: "Updated", description: "Campaign status changed." }),
-                                onError: (e) => toast({ title: "Update failed", description: String(e.message || e), variant: "destructive" }),
-                              }
-                            )}
-                            data-testid={`broadcast-toggle-${c.id}`}
-                          >{c.status === "Paused" ? "Resume" : "Pause"}</Button>
-                          <Button
-                            variant="outline" className="rounded-xl"
-                            onClick={() => updateM.mutate(
-                              { id: c.id, updates: { status: "Completed" } as any },
-                              {
-                                onSuccess: () => toast({ title: "Completed", description: "Campaign marked completed." }),
-                                onError: (e) => toast({ title: "Update failed", description: String(e.message || e), variant: "destructive" }),
-                              }
-                            )}
-                            data-testid={`broadcast-complete-${c.id}`}
-                          >Complete</Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                     <TableCell className="text-right">
+  <div className="inline-flex items-center gap-2 justify-end">
+
+    {/* Toggle Running / Paused */}
+    <Button
+      variant="outline"
+      className="rounded-xl"
+      onClick={() => {
+        updateM.mutate(
+          {
+            id: c.id,
+            updates: {
+              status: c.status === "Paused" ? "Running" : "Paused",
+            },
+          },
+          {
+            onSuccess: () => {
+              toast({ title: "Updated", description: "Campaign status changed." });
+              campaignsQ.refetch();
+            },
+            onError: (e: any) => {
+              toast({
+                title: "Update failed",
+                description: e?.message || "Something went wrong",
+                variant: "destructive",
+              });
+            },
+          }
+        );
+      }}
+    >
+      {c.status === "Paused" ? "Resume" : "Pause"}
+    </Button>
+
+    {/* Complete */}
+    <Button
+      variant="outline"
+      className="rounded-xl"
+      onClick={() => {
+        updateM.mutate(
+          {
+            id: c.id,
+            updates: { status: "Completed" },
+          },
+          {
+            onSuccess: () => {
+              toast({ title: "Completed", description: "Campaign marked completed." });
+              campaignsQ.refetch();
+            },
+            onError: (e: any) => {
+              toast({
+                title: "Update failed",
+                description: e?.message || "Something went wrong",
+                variant: "destructive",
+              });
+            },
+          }
+        );
+      }}
+    >
+      Complete
+    </Button>
+
+  </div>
+</TableCell>             </TableRow>
                   ))}
                 </TableBody>
               </Table>

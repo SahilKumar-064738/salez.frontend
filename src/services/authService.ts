@@ -1,11 +1,10 @@
 /**
- * src/services/authService.ts
- * Thin wrapper that delegates to services/auth.ts.
- * Field names updated to match backend contract (Issue 1).
+ * src/services/authService.ts — REFACTORED
+ * Thin wrapper delegating to services/auth.ts which now uses @/api/api.
  */
 
-import { loginUser, signupUser, fetchMe, getAuthToken, setAuthToken, removeAuthToken } from "@/services/auth";
-import type { AuthUser } from "@/services/auth";
+import { loginUser, signupUser, fetchMe, getAuthToken, setAuthToken, removeAuthToken } from '@/services/auth';
+import type { AuthUser } from '@/services/auth';
 
 export type { AuthUser };
 
@@ -15,68 +14,43 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-  name: string;          // maps to displayName in the API call
+  name: string;
   email: string;
   password: string;
-  companyName?: string;  // maps to businessName in the API call
-  businessType?: string; // forwarded to backend if supported
-  phone?: string;        // accepted here, not forwarded (not in backend schema)
-}
-
-export interface ChangePasswordPayload {
-  currentPassword: string;
-  newPassword: string;
+  companyName?: string;
+  businessType?: string;
+  phone?: string;
 }
 
 export const authService = {
-  /**
-   * Login — returns { token, user } so AuthContext can store both
-   */
   async login(payload: LoginPayload): Promise<{ token: string; user: AuthUser }> {
     const user = await loginUser(payload.email, payload.password);
     const token = getAuthToken();
-    if (!token) throw new Error("Token not received from server");
+    if (!token) throw new Error('Token not received from server');
     return { token, user };
   },
 
-  /**
-   * Register — returns { token, user }
-   * FIX (Issue 1): passes name as displayName, companyName as businessName
-   */
   async register(payload: RegisterPayload): Promise<{ token: string; user: AuthUser }> {
-    // Clear any stale token before registering
     removeAuthToken();
-
     const user = await signupUser({
-      name: payload.name,           // signupUser maps this to displayName
+      name: payload.name,
       companyName: payload.companyName,
       email: payload.email,
       password: payload.password,
-      // phone intentionally not forwarded — not in backend RegisterSchema
     });
-
     const token = getAuthToken();
-    if (!token) throw new Error("Token not generated. Please try logging in.");
+    if (!token) throw new Error('Token not generated. Please try logging in.');
     return { token, user };
   },
 
-  /**
-   * Get current user from /api/v1/auth/me
-   */
   async me(): Promise<AuthUser | null> {
     return fetchMe();
   },
 
-  /**
-   * Store token in localStorage
-   */
   setAuth(token: string) {
     setAuthToken(token);
   },
 
-  /**
-   * Logout — clear token
-   */
   logout(): void {
     removeAuthToken();
   },
