@@ -100,6 +100,15 @@ export function Navbar() {
             >
               About
             </Link>
+            <Link
+              href="/terms-and-conditions"
+              className={cn(
+                "hover:text-primary transition-colors",
+                location === "/terms-and-conditions" && "text-primary"
+              )}
+            >
+              T&amp;C
+            </Link>
 
             {/* Templates Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -204,6 +213,13 @@ export function Navbar() {
             onClick={() => setMobileOpen(false)}
           >
             About
+          </Link>
+          <Link
+            href="/terms-and-conditions"
+            className="block hover:text-primary"
+            onClick={() => setMobileOpen(false)}
+          >
+            Terms &amp; Conditions
           </Link>
 
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wide pt-1">

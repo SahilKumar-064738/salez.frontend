@@ -49,7 +49,7 @@ export function Footer() {
             <h3 className="font-semibold text-slate-900 mb-4">Company</h3>
             <ul className="space-y-3 text-sm text-slate-500">
               <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link href="/terms" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
+              <li><Link href="/terms-and-conditions" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
               <li><Link href="/terms#privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>

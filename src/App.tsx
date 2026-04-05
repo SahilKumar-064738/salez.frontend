@@ -18,6 +18,7 @@ import Pricing from "@/pages/public/Pricing";
 import Demo from "@/pages/public/Demo";
 import About from "@/pages/public/About";
 import Terms from "@/pages/public/Terms";
+import TermsPage from "@/pages/public/TermsPage";
 import MetaVerification from "@/pages/public/MetaVerification";
 import TemplateLanding from "@/pages/public/TemplateLanding";
 import Login from "@/pages/auth/Login";
@@ -139,6 +140,11 @@ function Router() {
       <Route path="/terms">
         <PublicLayout>
           <Terms />
+        </PublicLayout>
+      </Route>
+      <Route path="/terms-and-conditions">
+        <PublicLayout>
+          <TermsPage />
         </PublicLayout>
       </Route>
       <Route path="/meta-verification">
